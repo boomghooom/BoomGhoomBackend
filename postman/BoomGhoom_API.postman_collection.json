@@ -1,0 +1,1999 @@
+{
+	"info": {
+		"_postman_id": "boomghoom-api-v1",
+		"name": "BoomGhoom API",
+		"description": "Complete API collection for BoomGhoom - Social Events & Group Activities Platform",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "boomghoom"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Signup",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"9876543210\",\n  \"fullName\": \"John Doe\",\n  \"password\": \"password123\",\n  \"email\": \"john@example.com\",\n  \"referralCode\": \"ABC12345\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/signup",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "signup"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.tokens) {",
+									"        pm.environment.set(\"access_token\", jsonData.data.tokens.accessToken);",
+									"        pm.environment.set(\"refresh_token\", jsonData.data.tokens.refreshToken);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phoneNumber\": \"9876543210\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Google Auth",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idToken\": \"google_id_token_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/google",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "google"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Apple Auth",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"identityToken\": \"apple_identity_token\",\n  \"authorizationCode\": \"apple_auth_code\",\n  \"fullName\": {\n    \"givenName\": \"John\",\n    \"familyName\": \"Doe\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/apple",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "apple"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "refresh"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "logout"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/change-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "change-password"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Phone",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newPhoneNumber\": \"9876543211\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/phone",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "phone"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Doe Updated\",\n  \"displayName\": \"Johnny\",\n  \"bio\": \"Event enthusiast\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1990-01-01\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"latitude\": 19.0760,\n  \"longitude\": 72.8777,\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"country\": \"India\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/location",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "location"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Avatar",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"avatarUrl\": \"https://example.com/avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/avatar",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "avatar"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Bank Details",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountHolderName\": \"John Doe\",\n  \"accountNumber\": \"1234567890\",\n  \"ifscCode\": \"HDFC0001234\",\n  \"bankName\": \"HDFC Bank\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/bank-details",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "bank-details"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Finance Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/finance",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "finance"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add FCM Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"fcm_token_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/fcm-token",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "fcm-token"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/search?q=john",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "john"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Public Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "KYC - Initiate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/kyc/initiate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "kyc", "initiate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "KYC - Submit Selfie",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"selfieUrl\": \"https://example.com/selfie.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/kyc/selfie",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "kyc", "selfie"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "KYC - Submit Document",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"documentUrl\": \"https://example.com/aadhaar.jpg\",\n  \"documentType\": \"aadhaar\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/kyc/document",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "kyc", "document"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "KYC - Get Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/me/kyc/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "me", "kyc", "status"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Events",
+			"item": [
+				{
+					"name": "List Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events?page=1&limit=20&city=Mumbai&category=sports",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "city",
+									"value": "Mumbai"
+								},
+								{
+									"key": "category",
+									"value": "sports"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Nearby Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events?latitude=19.0760&longitude=72.8777&maxDistance=10&page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events"],
+							"query": [
+								{
+									"key": "latitude",
+									"value": "19.0760"
+								},
+								{
+									"key": "longitude",
+									"value": "72.8777"
+								},
+								{
+									"key": "maxDistance",
+									"value": "10"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Upcoming Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/upcoming?city=Mumbai&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "upcoming"],
+							"query": [
+								{
+									"key": "city",
+									"value": "Mumbai"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Featured Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/featured?city=Mumbai&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "featured"],
+							"query": [
+								{
+									"key": "city",
+									"value": "Mumbai"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event by Deep Link",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/link/:deepLinkId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "link", ":deepLinkId"],
+							"variable": [
+								{
+									"key": "deepLinkId",
+									"value": "deep_link_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"user_created\",\n  \"category\": \"sports\",\n  \"title\": \"Weekend Football Match\",\n  \"description\": \"Join us for an exciting football match this weekend. All skill levels welcome!\",\n  \"location\": {\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"address\": \"123 Sports Complex, Bandra\",\n    \"venueName\": \"Bandra Sports Complex\",\n    \"city\": \"Mumbai\",\n    \"state\": \"Maharashtra\"\n  },\n  \"startTime\": \"2024-12-25T10:00:00Z\",\n  \"endTime\": \"2024-12-25T12:00:00Z\",\n  \"imageUrls\": [\"https://example.com/event1.jpg\"],\n  \"coverImageUrl\": \"https://example.com/cover.jpg\",\n  \"eligibility\": {\n    \"genderAllowed\": [\"male\", \"female\"],\n    \"minAge\": 18,\n    \"maxAge\": 50,\n    \"maxDistance\": 20,\n    \"memberLimit\": 20,\n    \"requiresApproval\": true\n  },\n  \"pricing\": {\n    \"isFree\": true\n  },\n  \"rules\": [\"No smoking\", \"Wear proper sports gear\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/publish",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "publish"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Event",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Event Title\",\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Due to bad weather conditions\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "cancel"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/complete",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "complete"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Join Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/join",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "join"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Join Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/approve/:userId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "approve", ":userId"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								},
+								{
+									"key": "userId",
+									"value": "user_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Join Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Event is full\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/reject/:userId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "reject", ":userId"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								},
+								{
+									"key": "userId",
+									"value": "user_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request to Leave",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/leave",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "leave"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Leave Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/approve-leave/:userId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "approve-leave", ":userId"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								},
+								{
+									"key": "userId",
+									"value": "user_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/me/joined?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "me", "joined"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Created Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/me/created?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "me", "created"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Previous Participants",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/me/previous-participants",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", "me", "previous-participants"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Bulk Invite",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientIds\": [\"user_id_1\", \"user_id_2\"],\n  \"message\": \"Join my new event!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/bulk-invite",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "bulk-invite"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Record Share",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/events/:id/share",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "events", ":id", "share"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Finance",
+			"item": [
+				{
+					"name": "Get Finance Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/summary",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "summary"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/transactions?page=1&limit=20&type=due_cleared",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "transactions"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "type",
+									"value": "due_cleared"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Dues",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/dues",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "dues"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Payment Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"purpose\": \"clear_dues\",\n  \"amount\": 2500,\n  \"dueIds\": [\"due_id_1\", \"due_id_2\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/dues/pay",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "dues", "pay"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Dues with Commission",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dueIds\": [\"due_id_1\", \"due_id_2\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/dues/clear-with-commission",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "dues", "clear-with-commission"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Commissions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/commissions?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "commissions"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Withdrawals",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/withdrawals?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "withdrawals"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request Withdrawal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/withdraw",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "withdraw"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Payment Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"gatewayOrderId\": \"order_123\",\n  \"gatewayPaymentId\": \"pay_456\",\n  \"gatewaySignature\": \"signature_here\",\n  \"status\": \"success\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/finance/webhook/payment",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "finance", "webhook", "payment"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Social",
+			"item": [
+				{
+					"name": "Send Friend Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"toUserId\": \"user_id_here\",\n  \"eventId\": \"event_id_here\",\n  \"message\": \"Let's be friends!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends/request",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends", "request"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Accept Friend Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends/:id/accept",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends", ":id", "accept"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "friendship_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Friend Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends/:id/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends", ":id", "reject"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "friendship_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Friends",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Requests",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends/requests?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends", "requests"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Block User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends/:id/block",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends", ":id", "block"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "friendship_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Friend",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/friends/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "friends", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "friendship_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/notifications?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "notifications"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/notifications/unread-count",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "notifications", "unread-count"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification Read",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/notifications/:id/read",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "notifications", ":id", "read"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "notification_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All Notifications Read",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/notifications/read-all",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "notifications", "read-all"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Rate User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"toUserId\": \"user_id_here\",\n  \"eventId\": \"event_id_here\",\n  \"rating\": 5,\n  \"review\": \"Great participant!\",\n  \"isAnonymous\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/ratings",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "ratings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Ratings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/ratings/user/:id?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "ratings", "user", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "user_id_here"
+								}
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Report",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"targetType\": \"event\",\n  \"targetId\": \"event_id_here\",\n  \"reason\": \"spam\",\n  \"description\": \"This event seems suspicious\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/social/reports",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "social", "reports"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chat",
+			"item": [
+				{
+					"name": "Get Chats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats?page=1&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get or Create Direct Chat",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"user_id_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/direct",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", "direct"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event Chat",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/event/:eventId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", "event", ":eventId"],
+							"variable": [
+								{
+									"key": "eventId",
+									"value": "event_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chat by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id/messages?page=1&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id", "messages"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								}
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"type\": \"text\",\n  \"content\": \"Hello! How are you?\",\n  \"replyToMessageId\": \"message_id_here\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id/messages",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id", "messages"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Messages as Read",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id/read",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id", "read"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Message",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id/messages/:messageId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id", "messages", ":messageId"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								},
+								{
+									"key": "messageId",
+									"value": "message_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mute Chat",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"duration\": 3600\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id/mute",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id", "mute"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unmute Chat",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/chats/:id/unmute",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "chats", ":id", "unmute"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "chat_id_here"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/v1/health",
+					"host": ["{{base_url}}"],
+					"path": ["api", "v1", "health"]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
