@@ -64,10 +64,12 @@ export class UserRepository
   }
 
   async findByPhoneWithPassword(phoneNumber: string): Promise<IUser | null> {
+    console.log('Finding user with phone number:', phoneNumber);
     const user = await this.model
-      .findOne({ phoneNumber, isDeleted: false })
+      .findOne({ phoneNumber: phoneNumber.toString(), isDeleted: false })
       .select('+password');
-    return user ? (user.toObject() as IUser) : null;
+    console.log('User foundee:', user);
+    return user ? (user.toObject() as unknown as IUser) : null;
   }
 
   async findByEmail(email: string): Promise<IUser | null> {
