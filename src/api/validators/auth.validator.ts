@@ -1,8 +1,10 @@
 import { z } from 'zod';
+import { Genders } from '../../shared/constants/index.js';
 
 const phoneRegex = /^[6-9]\d{9}$/;
 
-export const signupSchema = z.object({
+// Schema for sending OTP during signup (Step 1)
+export const sendSignupOTPSchema = z.object({
   phoneNumber: z
     .string()
     .regex(phoneRegex, 'Invalid Indian phone number')
@@ -17,7 +19,30 @@ export const signupSchema = z.object({
     .min(6, 'Password must be at least 6 characters')
     .max(50, 'Password must be less than 50 characters'),
   email: z.string().email('Invalid email').optional(),
+  gender: z.enum(Genders as [string, ...string[]]).optional(),
+  fcmToken: z.string().min(1, 'FCM token cannot be empty').optional(),
   referralCode: z.string().length(8, 'Invalid referral code').optional(),
+});
+
+// Schema for verifying OTP and completing signup (Step 2)
+export const verifySignupOTPSchema = z.object({
+  phoneNumber: z
+    .string()
+    .regex(phoneRegex, 'Invalid Indian phone number')
+    .transform((val) => val.trim()),
+  otp: z
+    .string()
+    .min(4, 'OTP must be at least 4 digits')
+    .max(8, 'OTP must be less than 8 digits')
+    .regex(/^\d+$/, 'OTP must contain only digits'),
+});
+
+// Schema for resending OTP
+export const resendOTPSchema = z.object({
+  phoneNumber: z
+    .string()
+    .regex(phoneRegex, 'Invalid Indian phone number')
+    .transform((val) => val.trim()),
 });
 
 export const loginSchema = z.object({
@@ -62,7 +87,9 @@ export const updatePhoneSchema = z.object({
     .transform((val) => val.trim()),
 });
 
-export type SignupInput = z.infer<typeof signupSchema>;
+export type SendSignupOTPInput = z.infer<typeof sendSignupOTPSchema>;
+export type VerifySignupOTPInput = z.infer<typeof verifySignupOTPSchema>;
+export type ResendOTPInput = z.infer<typeof resendOTPSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 export type AppleAuthInput = z.infer<typeof appleAuthSchema>;

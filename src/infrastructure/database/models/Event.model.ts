@@ -40,7 +40,6 @@ const EventLocationSchema = new Schema(
     coordinates: {
       type: [Number], // [longitude, latitude]
       required: true,
-      index: '2dsphere',
     },
     address: {
       type: String,

@@ -117,12 +117,15 @@ export const config = {
 
   // SMS
   sms: {
-    provider: getEnvVar('SMS_PROVIDER', 'msg91') as 'msg91' | 'twilio',
-    msg91: {
-      authKey: process.env.MSG91_AUTH_KEY || '',
-      senderId: getEnvVar('MSG91_SENDER_ID', 'BOOMGH'),
-      templateId: process.env.MSG91_TEMPLATE_ID || '',
-    },
+    apiUrl: process.env.SMS_API_URL || '',
+    apiId: process.env.SMS_API_ID || '',
+    apiPassword: process.env.SMS_API_PASSWORD || '',
+    smsType: process.env.SMS_TYPE || 'OTP',
+    sender: process.env.SMS_SENDER || 'BOOMGH',
+    templateId: process.env.SMS_TEMPLATE_ID || '',
+    otpExpiry: getEnvVarAsInt('OTP_EXPIRY_SECONDS', 300), // 5 minutes
+    otpLength: getEnvVarAsInt('OTP_LENGTH', 6),
+    maxOtpAttempts: getEnvVarAsInt('MAX_OTP_ATTEMPTS', 3),
   },
 
   // Rate Limiting

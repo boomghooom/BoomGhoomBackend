@@ -1,8 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../../application/services/AuthService.js';
+import { otpService } from '../../application/services/OTPService.js';
+import { userRepository } from '../../infrastructure/database/repositories/UserRepository.js';
 import { sendSuccess, sendCreated } from '../../shared/utils/response.js';
+import { ConflictError, BadRequestError } from '../../shared/errors/AppError.js';
 import {
-  SignupInput,
+  SendSignupOTPInput,
+  VerifySignupOTPInput,
+  ResendOTPInput,
   LoginInput,
   GoogleAuthInput,
   AppleAuthInput,
@@ -12,14 +17,79 @@ import {
 } from '../validators/auth.validator.js';
 
 export class AuthController {
-  async signup(
-    req: Request<unknown, unknown, SignupInput>,
+  /**
+   * Step 1: Send OTP for signup
+   * Validates user data, checks if phone exists, and sends OTP
+   */
+  async sendSignupOTP(
+    req: Request<unknown, unknown, SendSignupOTPInput>,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await authService.signup(req.body);
+      const { phoneNumber } = req.body;
+
+      // Check if user already exists
+      const existingUser = await userRepository.findByPhone(phoneNumber);
+      if (existingUser) {
+        throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
+      }
+
+      // Send OTP and store pending signup data
+      const result = await otpService.sendSignupOTP(req.body);
+      sendSuccess(res, result, { message: 'OTP sent to your phone number' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Step 2: Verify OTP and complete signup
+   * Creates user account after successful OTP verification
+   */
+  async verifySignupOTP(
+    req: Request<unknown, unknown, VerifySignupOTPInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { phoneNumber, otp } = req.body;
+
+      // Verify OTP
+      await otpService.verifyOTP(phoneNumber, otp);
+
+      // Get pending signup data
+      const signupData = await otpService.getPendingSignupData(phoneNumber);
+      if (!signupData) {
+        throw new BadRequestError(
+          'Signup session expired. Please start the signup process again.',
+          'SIGNUP_SESSION_EXPIRED'
+        );
+      }
+
+      // Create user account
+      const result = await authService.signup(signupData);
+
+      // Clear OTP attempts after successful signup
+      await otpService.clearOTPAttempts(phoneNumber);
+
       sendCreated(res, result, 'Account created successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Resend OTP
+   */
+  async resendOTP(
+    req: Request<unknown, unknown, ResendOTPInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const result = await otpService.resendOTP(req.body.phoneNumber);
+      sendSuccess(res, result, { message: 'OTP resent successfully' });
     } catch (error) {
       next(error);
     }
@@ -121,4 +191,3 @@ export class AuthController {
 }
 
 export const authController = new AuthController();
-
