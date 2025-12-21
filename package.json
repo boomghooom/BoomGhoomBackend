@@ -2,20 +2,12 @@
   "name": "boomghoom-backend",
   "version": "1.0.0",
   "description": "Backend API for BoomGhoom - Social Events & Group Activities Platform",
-  "main": "dist/index.js",
-  "scripts": {
-    "dev": "nodemon",
-    "build": "tsc",
-    "start": "node src/index.js",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "db:seed": "tsx src/scripts/seed.ts",
-    "db:migrate": "tsx src/scripts/migrate.ts"
-  },
+  "main": "dist/index.js","scripts": {
+  "dev": "nodemon",
+  "build": "tsc",
+  "start": "node dist/index.js"
+},
+
   "keywords": [
     "events",
     "social",
