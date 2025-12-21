@@ -91,6 +91,8 @@ export interface ICreateUserDTO {
   fullName: string;
   password?: string;
   email?: string;
+  gender?: string;
+  fcmTokens?: string[];
   authProvider: 'phone' | 'google' | 'apple';
   googleId?: string;
   appleId?: string;

@@ -2,9 +2,11 @@ import { Router } from 'express';
 import { authController } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { authLimiter } from '../middleware/rateLimit.middleware.js';
+import { authLimiter, otpLimiter } from '../middleware/rateLimit.middleware.js';
 import {
-  signupSchema,
+  sendSignupOTPSchema,
+  verifySignupOTPSchema,
+  resendOTPSchema,
   loginSchema,
   googleAuthSchema,
   appleAuthSchema,
@@ -15,13 +17,37 @@ import {
 
 const router = Router();
 
-// Public routes
+// ============================================
+// OTP-based Signup Flow (2 steps)
+// ============================================
+
+// Step 1: Send OTP for signup (validates data + sends OTP)
 router.post(
-  '/signup',
-  authLimiter,
-  validate(signupSchema),
-  authController.signup.bind(authController)
+  '/signup/send-otp',
+  otpLimiter,
+  validate(sendSignupOTPSchema),
+  authController.sendSignupOTP.bind(authController)
 );
+
+// Step 2: Verify OTP and complete signup (creates account + returns tokens)
+router.post(
+  '/signup/verify-otp',
+  authLimiter,
+  validate(verifySignupOTPSchema),
+  authController.verifySignupOTP.bind(authController)
+);
+
+// Resend OTP
+router.post(
+  '/otp/resend',
+  otpLimiter,
+  validate(resendOTPSchema),
+  authController.resendOTP.bind(authController)
+);
+
+// ============================================
+// Login routes
+// ============================================
 
 router.post(
   '/login',
@@ -29,6 +55,10 @@ router.post(
   validate(loginSchema),
   authController.login.bind(authController)
 );
+
+// ============================================
+// Social Auth routes
+// ============================================
 
 router.post(
   '/google',
@@ -44,13 +74,20 @@ router.post(
   authController.appleAuth.bind(authController)
 );
 
+// ============================================
+// Token management
+// ============================================
+
 router.post(
   '/refresh',
   validate(refreshTokenSchema),
   authController.refreshToken.bind(authController)
 );
 
-// Protected routes
+// ============================================
+// Protected routes (require authentication)
+// ============================================
+
 router.post(
   '/logout',
   authenticate,
@@ -72,4 +109,3 @@ router.patch(
 );
 
 export default router;
-

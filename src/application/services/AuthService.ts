@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { config } from '../../config/index.js';
 import { userRepository } from '../../infrastructure/database/repositories/UserRepository.js';
+import { UserModel } from '../../infrastructure/database/models/User.model.js';
 import { redisClient } from '../../config/redis.js';
 import { IUser, ICreateUserDTO } from '../../domain/entities/User.js';
 import {
@@ -10,7 +11,7 @@ import {
   ConflictError,
   NotFoundError,
 } from '../../shared/errors/AppError.js';
-import { CacheKeys, CacheTTL } from '../../shared/constants/index.js';
+import { CacheKeys } from '../../shared/constants/index.js';
 import { logger, logWithContext } from '../../shared/utils/logger.js';
 
 export interface ITokenPayload {
@@ -35,6 +36,8 @@ export interface ISignupData {
   fullName: string;
   password: string;
   email?: string;
+  gender?: string;
+  fcmToken?: string;
   referralCode?: string;
 }
 
@@ -59,11 +62,18 @@ export class AuthService {
   }
 
   async signup(data: ISignupData): Promise<{ user: IUser; tokens: IAuthTokens }> {
-    // Check if user already exists
+    // Check if active user already exists
     const existingUser = await userRepository.findByPhone(data.phoneNumber);
     if (existingUser) {
       throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
     }
+
+    // Check if a soft-deleted user exists with this phone number
+    // We need to check the model directly since findByPhone filters out deleted users
+    const softDeletedUser = await UserModel.findOne({
+      phoneNumber: data.phoneNumber,
+      isDeleted: true,
+    });
 
     // Validate referral code if provided
     let referredBy: string | undefined;
@@ -74,20 +84,111 @@ export class AuthService {
       }
     }
 
-    // Create user
-    const createData: ICreateUserDTO = {
-      phoneNumber: data.phoneNumber,
-      fullName: data.fullName,
-      password: data.password,
-      email: data.email,
-      authProvider: 'phone',
-      referredBy,
-    };
+    let user: IUser;
 
-    const user = await userRepository.create(createData);
+    if (softDeletedUser) {
+      // Restore and update the soft-deleted user
+      const updateData: Record<string, unknown> = {
+        fullName: data.fullName,
+        password: data.password,
+        email: data.email,
+        authProvider: 'phone' as const,
+        referredBy,
+        isDeleted: false,
+        deletedAt: undefined,
+        ...(data.gender && { gender: data.gender }),
+        ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
+      };
+
+      // Restore the user by updating it
+      const restoredUser = await UserModel.findByIdAndUpdate(
+        softDeletedUser._id,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      );
+
+      if (!restoredUser) {
+        throw new ConflictError('Failed to restore account', 'RESTORE_FAILED');
+      }
+
+      // Get the restored user through repository to ensure proper type conversion
+      const restored = await userRepository.findById(restoredUser._id.toString());
+      if (!restored) {
+        throw new ConflictError('Failed to restore account', 'RESTORE_FAILED');
+      }
+      user = restored;
+      logWithContext.auth('User account restored', {
+        userId: user._id,
+        phoneNumber: data.phoneNumber,
+      });
+    } else {
+      // Create new user
+      const createData: ICreateUserDTO = {
+        phoneNumber: data.phoneNumber,
+        fullName: data.fullName,
+        password: data.password,
+        email: data.email,
+        authProvider: 'phone',
+        referredBy,
+        ...(data.gender && { gender: data.gender }),
+        ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
+      };
+
+      try {
+        user = await userRepository.create(createData);
+        logWithContext.auth('User signed up', { userId: user._id, phoneNumber: data.phoneNumber });
+      } catch (error) {
+        // Handle case where MongoDB unique constraint fails (race condition)
+        // This can happen if a user was created between our check and create
+        if (
+          (error as { code?: number; name?: string }).code === 11000 ||
+          (error as { code?: number; name?: string }).name === 'MongoServerError'
+        ) {
+          // Try to find and restore if it's a soft-deleted user
+          const raceConditionUser = await UserModel.findOne({
+            phoneNumber: data.phoneNumber,
+          });
+          if (raceConditionUser?.isDeleted) {
+            const updateData: Record<string, unknown> = {
+              fullName: data.fullName,
+              password: data.password,
+              email: data.email,
+              authProvider: 'phone' as const,
+              referredBy,
+              isDeleted: false,
+              deletedAt: undefined,
+              ...(data.gender && { gender: data.gender }),
+              ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
+            };
+            const restoredUser = await UserModel.findByIdAndUpdate(
+              raceConditionUser._id,
+              { $set: updateData },
+              { new: true, runValidators: true }
+            );
+            if (restoredUser) {
+              // Get the restored user through repository to ensure proper type conversion
+              const restored = await userRepository.findById(restoredUser._id.toString());
+              if (!restored) {
+                throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
+              }
+              user = restored;
+              logWithContext.auth('User account restored (race condition)', {
+                userId: user._id,
+                phoneNumber: data.phoneNumber,
+              });
+            } else {
+              throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
+            }
+          } else {
+            throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+
     const tokens = await this.generateTokens(user);
-
-    logWithContext.auth('User signed up', { userId: user._id, phoneNumber: data.phoneNumber });
 
     return { user, tokens };
   }
