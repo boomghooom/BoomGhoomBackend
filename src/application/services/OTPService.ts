@@ -114,9 +114,9 @@ export class OTPService {
     const otpKey = this.getOTPKey(phoneNumber);
     await redisClient.set(otpKey, otp, config.sms.otpExpiry);
 
-    // Store pending signup data in Redis
+    // Store pending signup data in Redis (redisClient.set handles JSON serialization)
     const pendingKey = this.getPendingSignupKey(phoneNumber);
-    await redisClient.set(pendingKey, JSON.stringify(data), config.sms.otpExpiry + 60); // Extra minute buffer
+    await redisClient.set(pendingKey, data, config.sms.otpExpiry + 60); // Extra minute buffer
 
     // Send SMS
     const sent = await this.sendSMS(phoneNumber, otp);
@@ -133,7 +133,6 @@ export class OTPService {
     return {
       message: 'OTP sent successfully',
       expiresIn: config.sms.otpExpiry,
-    //   otp: otp,
     };
   }
 
@@ -171,7 +170,7 @@ export class OTPService {
    */
   async getPendingSignupData(phoneNumber: string): Promise<IPendingSignupData | null> {
     const pendingKey = this.getPendingSignupKey(phoneNumber);
-    const data = await redisClient.get(pendingKey);
+    const data = await redisClient.get<IPendingSignupData>(pendingKey);
 
     if (!data) {
       return null;
@@ -180,7 +179,8 @@ export class OTPService {
     // Delete the pending data after retrieval
     await redisClient.del(pendingKey);
 
-    return JSON.parse(data as string) as IPendingSignupData;
+    // redisClient.get already handles JSON parsing
+    return data;
   }
 
   /**
@@ -236,12 +236,11 @@ export class OTPService {
   async resendOTP(phoneNumber: string): Promise<ISendOTPResponse> {
     // Check if there's pending signup data
     const pendingKey = this.getPendingSignupKey(phoneNumber);
-    const pendingData = await redisClient.get(pendingKey);
+    const pendingData = await redisClient.get<IPendingSignupData>(pendingKey);
 
     if (pendingData) {
       // Resend signup OTP
-      const data = JSON.parse(pendingData as string) as IPendingSignupData;
-      return this.sendSignupOTP(data);
+      return this.sendSignupOTP(pendingData);
     }
 
     // Otherwise, it's a login OTP resend

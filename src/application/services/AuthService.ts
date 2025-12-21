@@ -194,7 +194,9 @@ export class AuthService {
   }
 
   async login(credentials: ILoginCredentials): Promise<{ user: IUser; tokens: IAuthTokens }> {
+    console.log('Login attempt for phone:', credentials.phoneNumber);
     const user = await userRepository.findByPhoneWithPassword(credentials.phoneNumber);
+    console.log('User found:', user ? 'Yes' : 'No');
     if (!user) {
       throw new UnauthorizedError('Invalid credentials', 'INVALID_CREDENTIALS');
     }
