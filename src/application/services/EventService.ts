@@ -50,14 +50,21 @@ export class EventService {
     if (data.type === 'user_created' && admin.kyc.status !== 'approved') {
       throw new KYCRequiredError('KYC verification required to create events');
     }
+    console.log("data", data);
 
-    // Create event
-    const event = await eventRepository.create({
-      ...data,
-      status: 'draft',
+    // Create event - transform adminId to admin object for the model
+    const { adminId, ...eventData } = data;
+    console.log("adminId", adminId);
+    console.log("eventData", eventData);
+    const createData = {
+      ...eventData,
+      admin: { userId: adminId },
+      status: 'draft' as const,
       participantCount: 0,
       waitlistCount: 0,
-    });
+    };
+    console.log("createData being sent to repository:", JSON.stringify(createData, null, 2));
+    const event = await eventRepository.create(createData as unknown as ICreateEventDTO);
 
     // Update user stats
     await userRepository.updateStats(data.adminId, {
@@ -83,7 +90,7 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
-    if (event.admin.userId.toString() !== userId) {
+    if (event.admin.userId.toString() !== userId.toString()) {
       throw new ForbiddenError('Not authorized to publish this event', 'NOT_AUTHORIZED');
     }
 

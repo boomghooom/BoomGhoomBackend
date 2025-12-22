@@ -18,8 +18,18 @@ export class EventController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    try {
-      const { location, ...rest } = req.body;
+    // try {  
+     console.log("req");
+      console.log("req.body", req.body);
+      const { location, pricing, ...rest } = req.body;
+      
+      // Default pricing if not provided
+      const defaultPricing = {
+        isFree: true,
+        currency: 'INR',
+        includesGST: true,
+      };
+       
       const event = await eventService.createEvent({
         ...rest,
         adminId: req.userId!,
@@ -32,11 +42,12 @@ export class EventController {
           state: location.state,
           landmark: location.landmark,
         },
+        pricing: pricing ?? defaultPricing,
       });
       sendCreated(res, event, 'Event created');
-    } catch (error) {
-      next(error);
-    }
+    // } catch (error) {
+    //   next(error);
+    // }
   }
 
   async publish(
