@@ -101,22 +101,38 @@ export class EventRepository
     filters?: IEventFilters,
     options: IPaginationOptions = { page: 1, limit: 20 }
   ): Promise<IPaginatedResult<IEventSummary>> {
-    const query = this.buildFilterQuery(filters);
-    query['location.coordinates'] = {
-      $near: {
-        $geometry: { type: 'Point', coordinates },
-        $maxDistance: maxDistance,
+    const baseQuery = this.buildFilterQuery(filters);
+    baseQuery.status = { $in: ['upcoming', 'ongoing'] };
+    baseQuery.isPublished = true;
+
+    // Query with $near for fetching sorted results by distance
+    const nearQuery = {
+      ...baseQuery,
+      'location.coordinates': {
+        $near: {
+          $geometry: { type: 'Point', coordinates },
+          $maxDistance: maxDistance,
+        },
       },
     };
-    query.status = { $in: ['upcoming', 'ongoing'] };
-    query.isPublished = true;
 
-    // For geo queries, we need to handle pagination differently
+    // Query with $geoWithin for counting (works with countDocuments)
+    // Convert maxDistance (meters) to radians: meters / Earth's radius in meters
+    const maxDistanceRadians = maxDistance / 6378100;
+    const countQuery = {
+      ...baseQuery,
+      'location.coordinates': {
+        $geoWithin: {
+          $centerSphere: [coordinates, maxDistanceRadians],
+        },
+      },
+    };
+
     const skip = (options.page - 1) * options.limit;
     
     const [events, total] = await Promise.all([
-      this.model.find(query).skip(skip).limit(options.limit),
-      this.model.countDocuments(query),
+      this.model.find(nearQuery).skip(skip).limit(options.limit),
+      this.model.countDocuments(countQuery),
     ]);
 
     const totalPages = Math.ceil(total / options.limit);
