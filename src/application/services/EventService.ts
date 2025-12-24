@@ -317,7 +317,7 @@ export class EventService {
     }
 
     // Check eligibility
-    const eligibility = (event as unknown as { isUserEligible: (user: { gender?: string; dateOfBirth?: Date; location?: { coordinates: [number, number] } }) => { eligible: boolean; reason?: string } }).isUserEligible({
+    const eligibility = this.checkUserEligibility(event, {
       gender: user.gender,
       dateOfBirth: user.dateOfBirth,
       location: user.location,
@@ -332,8 +332,8 @@ export class EventService {
       throw new EventFullError();
     }
 
-    // For user-created events, check if user has pending dues
-    if (event.type === 'user_created' && user.finance.dues > 0) {
+    // For paid events, check if user has pending dues from previous events
+    if (!event.pricing?.isFree && user.finance.dues > 0) {
       throw new DuesPendingError();
     }
 
@@ -435,8 +435,7 @@ export class EventService {
     if (!event) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
-
-    if (event.admin.userId.toString() !== adminId) {
+    if (event.admin.userId.toString() !== adminId.toString()) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
     }
 
@@ -932,6 +931,69 @@ export class EventService {
   private async invalidateEventCaches(eventId: string, city: string): Promise<void> {
     await redisClient.del(CacheKeys.EVENT(eventId));
     await redisClient.delPattern(`${CacheKeys.EVENTS_BY_CITY(city, 0).slice(0, -1)}*`);
+  }
+
+  /**
+   * Check if a user is eligible to join an event based on gender, age, and distance criteria
+   */
+  private checkUserEligibility(
+    event: IEvent,
+    user: {
+      gender?: string;
+      dateOfBirth?: Date;
+      location?: { coordinates: [number, number] };
+    }
+  ): { eligible: boolean; reason?: string } {
+    // Check gender
+    if (user.gender && !(event.eligibility.genderAllowed as string[]).includes(user.gender)) {
+      return { eligible: false, reason: 'Gender not eligible for this event' };
+    }
+
+    // Check age
+    if (user.dateOfBirth) {
+      const age = Math.floor(
+        (Date.now() - new Date(user.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+      );
+      if (age < event.eligibility.minAge) {
+        return { eligible: false, reason: 'You are below the minimum age requirement' };
+      }
+      if (age > event.eligibility.maxAge) {
+        return { eligible: false, reason: 'You are above the maximum age requirement' };
+      }
+    }
+
+    // Check distance if maxDistance is set
+    if (event.eligibility.maxDistance && user.location?.coordinates) {
+      const eventCoords = event.location.coordinates;
+      const userCoords = user.location.coordinates;
+
+      // Haversine formula for distance calculation
+      const R = 6371; // Earth's radius in km
+      const dLat = ((userCoords[1] - eventCoords[1]) * Math.PI) / 180;
+      const dLon = ((userCoords[0] - eventCoords[0]) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((eventCoords[1] * Math.PI) / 180) *
+          Math.cos((userCoords[1] * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+
+      if (distance > event.eligibility.maxDistance) {
+        return {
+          eligible: false,
+          reason: `You are ${distance.toFixed(1)}km away. Maximum allowed distance is ${event.eligibility.maxDistance}km`,
+        };
+      }
+    }
+
+    // Check if event is full
+    if (event.participantCount >= event.eligibility.memberLimit) {
+      return { eligible: false, reason: 'Event is full' };
+    }
+
+    return { eligible: true };
   }
 }
 
