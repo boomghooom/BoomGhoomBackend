@@ -38,7 +38,16 @@ const EventLocationSchema = new Schema(
       default: 'Point',
     },
     coordinates: {
-      type: [Number], // [longitude, latitude]
+      /**
+       * GeoJSON coordinates array: [longitude, latitude]
+       * 
+       * IMPORTANT: Format is [longitude, latitude] NOT [latitude, longitude]
+       * This follows the GeoJSON and MongoDB 2dsphere standard.
+       * 
+       * @example [72.8777, 19.076] = Mumbai (longitude: 72.8777, latitude: 19.076)
+       * @example coordinates[0] = longitude, coordinates[1] = latitude
+       */
+      type: [Number],
       required: true,
       index: '2dsphere',
     },
@@ -354,8 +363,9 @@ const EventSchema = new Schema<IEventDocument, IEventModel>(
     toJSON: {
       virtuals: true,
       transform: (_doc, ret) => {
-        delete ret.__v;
-        return ret;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { __v, ...rest } = ret as any;
+        return rest;
       },
     },
     toObject: {

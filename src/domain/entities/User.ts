@@ -2,7 +2,16 @@ import { Gender, KYCStatus } from '../../shared/constants/index.js';
 
 export interface IUserLocation {
   type: 'Point';
-  coordinates: [number, number]; // [longitude, latitude]
+  /**
+   * GeoJSON coordinates array: [longitude, latitude]
+   * 
+   * IMPORTANT: Format is [longitude, latitude] NOT [latitude, longitude]
+   * This follows the GeoJSON and MongoDB 2dsphere standard.
+   * 
+   * @example [72.8777, 19.076] represents Mumbai (longitude: 72.8777, latitude: 19.076)
+   * @example coordinates[0] = longitude, coordinates[1] = latitude
+   */
+  coordinates: [number, number];
   city: string;
   state?: string;
   country: string;

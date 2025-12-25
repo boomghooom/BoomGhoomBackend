@@ -35,6 +35,8 @@ export class EventController {
         adminId: req.userId!,
         location: {
           type: 'Point',
+          // GeoJSON/MongoDB 2dsphere format: [longitude, latitude]
+          // This follows the standard: coordinates[0] = longitude, coordinates[1] = latitude
           coordinates: [location.longitude, location.latitude],
           address: location.address,
           venueName: location.venueName,
