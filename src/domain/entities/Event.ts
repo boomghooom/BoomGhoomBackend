@@ -156,6 +156,23 @@ export interface ICreateEventDTO {
   rules?: string[];
 }
 
+export interface ICreateEventWithPublishDTO {
+  type: EventType;
+  category: EventCategory;
+  title: string;
+  description: string;
+  location: IEventLocation;
+  startTime: Date;
+  endTime: Date;
+  imageUrls?: string[];
+  coverImageUrl?: string;
+  adminId: string;
+  eligibility: IEventEligibility;
+  pricing: IEventPricing;
+  rules?: string[];
+  isPublished: boolean;
+}
+
 export interface IUpdateEventDTO {
   title?: string;
   description?: string;

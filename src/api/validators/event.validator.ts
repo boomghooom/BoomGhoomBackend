@@ -61,6 +61,8 @@ export const createEventSchema = z.object({
   path: ['endTime'],
 });
 
+
+
 export const updateEventSchema = z.object({
   title: z
     .string()

@@ -4,4 +4,7 @@ export * from './event.controller.js';
 export * from './finance.controller.js';
 export * from './social.controller.js';
 export * from './chat.controller.js';
+export * from './booking.controller.js';
+export * from './pass.controller.js';
+export * from './upload.controller.js';
 

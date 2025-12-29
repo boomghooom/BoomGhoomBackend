@@ -55,9 +55,17 @@ export type EventCategory = (typeof EventCategories)[number];
 export const EventTypes = ['sponsored', 'user_created'] as const;
 export type EventType = (typeof EventTypes)[number];
 
+// Event source
+export const EventSources = ['user', 'sponsor'] as const;
+export type EventSource = (typeof EventSources)[number];
+
 // Event status
 export const EventStatuses = ['draft', 'upcoming', 'ongoing', 'completed', 'cancelled'] as const;
 export type EventStatus = (typeof EventStatuses)[number];
+
+// Event approval status
+export const ApprovalStatuses = ['pending', 'approved', 'rejected'] as const;
+export type ApprovalStatus = (typeof ApprovalStatuses)[number];
 
 // Gender
 export const Genders = ['male', 'female', 'other', 'prefer_not_to_say'] as const;
@@ -79,6 +87,10 @@ export const TransactionTypes = [
   'referral_reward',
   'event_payment',
   'refund',
+  'booking_payment',
+  'booking_refund',
+  'sponsor_payout',
+  'admin_payout',
 ] as const;
 export type TransactionType = (typeof TransactionTypes)[number];
 
@@ -93,6 +105,26 @@ export type PaymentMethod = (typeof PaymentMethods)[number];
 // Commission status
 export const CommissionStatuses = ['pending', 'available', 'withdrawn'] as const;
 export type CommissionStatus = (typeof CommissionStatuses)[number];
+
+// Booking status
+export const BookingStatuses = ['pending', 'confirmed', 'cancelled', 'refunded'] as const;
+export type BookingStatus = (typeof BookingStatuses)[number];
+
+// Pass status
+export const PassStatuses = ['active', 'used', 'cancelled', 'expired'] as const;
+export type PassStatus = (typeof PassStatuses)[number];
+
+// Payout status
+export const PayoutStatuses = ['pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
+export type PayoutStatus = (typeof PayoutStatuses)[number];
+
+// Sponsor status
+export const SponsorStatuses = ['pending', 'approved', 'rejected', 'suspended'] as const;
+export type SponsorStatus = (typeof SponsorStatuses)[number];
+
+// Staff roles
+export const StaffRoles = ['super_admin', 'admin', 'moderator', 'support'] as const;
+export type StaffRole = (typeof StaffRoles)[number];
 
 // Friend request status
 export const FriendRequestStatuses = ['pending', 'accepted', 'rejected', 'blocked'] as const;

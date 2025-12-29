@@ -5,6 +5,8 @@ import {
   EventCategories,
   EventTypes,
   EventStatuses,
+  EventSources,
+  ApprovalStatuses,
   Genders,
   ParticipationStatuses,
 } from '../../../shared/constants/index.js';
@@ -227,12 +229,128 @@ const EventAdminSchema = new Schema(
   { _id: false }
 );
 
+const EventSponsorSchema = new Schema(
+  {
+    sponsorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Sponsor',
+      required: true,
+      index: true,
+    },
+    contactEmail: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
+    contactPhone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false }
+);
+
+const EventTicketSchema = new Schema(
+  {
+    type: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true, // e.g., "general", "vip", "premium", "early_bird"
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    price: {
+      type: Number, // Base price in paise
+      required: true,
+      min: 0,
+    },
+    platformFee: {
+      type: Number, // BoomGhoom fee in paise
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    totalPrice: {
+      type: Number, // User pays this (price + platformFee) in paise
+      required: true,
+      min: 0,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    sold: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    available: {
+      type: Number,
+      default: function () {
+        return this.quantity;
+      },
+      min: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { _id: false }
+);
+
+const EventTicketingSchema = new Schema(
+  {
+    isTicketed: {
+      type: Boolean,
+      default: false,
+    },
+    tickets: {
+      type: [EventTicketSchema],
+      default: [],
+    },
+  },
+  { _id: false }
+);
+
+const EventApprovalSchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: ApprovalStatuses,
+      default: 'pending',
+      index: true,
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'Staff',
+    },
+    approvedAt: Date,
+    rejectionReason: String,
+  },
+  { _id: false }
+);
+
 const EventSchema = new Schema<IEventDocument, IEventModel>(
   {
     type: {
       type: String,
       enum: EventTypes,
       required: true,
+      index: true,
+    },
+    source: {
+      type: String,
+      enum: EventSources,
+      required: true,
+      default: 'user',
       index: true,
     },
     status: {
@@ -278,7 +396,15 @@ const EventSchema = new Schema<IEventDocument, IEventModel>(
     coverImageUrl: String,
     admin: {
       type: EventAdminSchema,
-      required: true,
+      required: function (): boolean {
+        return (this as { source: string }).source === 'user';
+      },
+    },
+    sponsor: {
+      type: EventSponsorSchema,
+      required: function (): boolean {
+        return (this as { source: string }).source === 'sponsor';
+      },
     },
     eligibility: {
       type: EventEligibilitySchema,
@@ -287,6 +413,14 @@ const EventSchema = new Schema<IEventDocument, IEventModel>(
     pricing: {
       type: EventPricingSchema,
       default: () => ({ isFree: true }),
+    },
+    ticketing: {
+      type: EventTicketingSchema,
+      default: () => ({ isTicketed: false, tickets: [] }),
+    },
+    approvalStatus: {
+      type: EventApprovalSchema,
+      default: () => ({ status: 'pending' }),
     },
     coupons: {
       type: [EventCouponSchema],
@@ -379,6 +513,9 @@ EventSchema.index({ 'location.coordinates': '2dsphere' });
 EventSchema.index({ status: 1, 'location.city': 1, startTime: 1 });
 EventSchema.index({ status: 1, category: 1, startTime: 1 });
 EventSchema.index({ 'admin.userId': 1, status: 1 });
+EventSchema.index({ 'sponsor.sponsorId': 1, status: 1 });
+EventSchema.index({ source: 1, status: 1 });
+EventSchema.index({ 'approvalStatus.status': 1 });
 EventSchema.index({ 'participants.userId': 1 });
 EventSchema.index({ type: 1, status: 1, startTime: 1 });
 EventSchema.index({ startTime: 1, status: 1 });
@@ -498,7 +635,7 @@ EventSchema.statics.findByDeepLink = function (deepLinkId: string) {
   return this.findOne({ deepLinkId });
 };
 
-// Pre-save hook to update participant count
+// Pre-save hook to update participant count and ticket availability
 EventSchema.pre('save', function (next) {
   if (this.isModified('participants')) {
     const approvedCount = this.participants.filter((p) => p.status === 'approved').length;
@@ -507,6 +644,14 @@ EventSchema.pre('save', function (next) {
     const pendingCount = this.participants.filter((p) => p.status === 'pending_approval').length;
     this.waitlistCount = pendingCount;
   }
+
+  // Update ticket availability if ticketing is enabled
+  if (this.isModified('ticketing') && (this as any).ticketing?.isTicketed && (this as any).ticketing.tickets) {
+    ((this as any).ticketing.tickets as Array<{ quantity: number; sold: number; available: number }>).forEach((ticket) => {
+      ticket.available = ticket.quantity - ticket.sold;
+    });
+  }
+
   next();
 });
 

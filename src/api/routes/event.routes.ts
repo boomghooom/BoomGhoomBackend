@@ -55,6 +55,14 @@ router.post(
   validate(createEventSchema),
   eventController.create.bind(eventController)
 );
+// create event with publish
+router.post(
+  '/create-with-publish',
+  requireKYC,
+  heavyOperationLimiter,
+  validate(createEventSchema),
+  eventController.createEventWithPublish.bind(eventController)
+);
 
 // Event management
 router.post(
@@ -62,6 +70,7 @@ router.post(
   validate(idParamSchema, 'params'),
   eventController.publish.bind(eventController)
 );
+
 
 router.patch(
   '/:id',

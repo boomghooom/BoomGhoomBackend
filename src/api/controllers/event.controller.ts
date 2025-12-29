@@ -11,6 +11,15 @@ import {
 } from '../validators/event.validator.js';
 import { IdParamInput } from '../validators/user.validator.js';
 import { DistanceUnits } from '../../shared/constants/index.js';
+import { config } from '../../config/index.js';
+import { EventCategory } from '../../shared/constants/index.js';
+
+/**
+ * Get default category image URL based on category
+ */
+const getCategoryImageUrl = (category: EventCategory): string | undefined => {
+  return config.categoryImages[category] || undefined;
+};
 
 export class EventController {
   async create(
@@ -18,17 +27,37 @@ export class EventController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    // try {  
-     console.log("req");
+    try {
+      console.log("req");
       console.log("req.body", req.body);
-      const { location, pricing, ...rest } = req.body;
+      const { location, pricing, imageUrls, coverImageUrl, ...rest } = req.body;
       
       // Default pricing if not provided
       const defaultPricing = {
         isFree: true,
         currency: 'INR',
         includesGST: true,
+        price: undefined as number | undefined,
       };
+      
+      // If event is paid (not free), set price to EVENTS_PRICE from config
+      const finalPricing = { ...(pricing ?? defaultPricing) };
+      if (finalPricing.isFree === false) {
+        finalPricing.price = config.business.eventsPrice;
+      }
+      
+      // Get default category image URL if not provided
+      const categoryImageUrl = getCategoryImageUrl(rest.category);
+      
+      // Set default imageUrls if not provided
+      const finalImageUrls = imageUrls && imageUrls.length > 0 
+        ? imageUrls 
+        : categoryImageUrl 
+          ? [categoryImageUrl] 
+          : [];
+      
+      // Set default coverImageUrl if not provided
+      const finalCoverImageUrl = coverImageUrl || categoryImageUrl;
        
       const event = await eventService.createEvent({
         ...rest,
@@ -44,12 +73,74 @@ export class EventController {
           state: location.state,
           landmark: location.landmark,
         },
-        pricing: pricing ?? defaultPricing,
+        pricing: finalPricing,
+        imageUrls: finalImageUrls,
+        coverImageUrl: finalCoverImageUrl,
       });
       sendCreated(res, event, 'Event created');
-    // } catch (error) {
-    //   next(error);
-    // }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createEventWithPublish(
+    req: Request<unknown, unknown, CreateEventInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { location, pricing, imageUrls, coverImageUrl, ...rest } = req.body;
+      
+      // Default pricing if not provided
+      const defaultPricing = {
+        isFree: true,
+        currency: 'INR',
+        includesGST: true,
+        price: undefined as number | undefined,
+      };
+      
+      // If event is paid (not free), set price to EVENTS_PRICE from config
+      const finalPricing = { ...(pricing ?? defaultPricing) };
+      if (finalPricing.isFree === false) {
+        finalPricing.price = config.business.eventsPrice;
+      }
+      
+      // Get default category image URL if not provided
+      const categoryImageUrl = getCategoryImageUrl(rest.category);
+      
+      // Set default imageUrls if not provided
+      const finalImageUrls = imageUrls && imageUrls.length > 0 
+        ? imageUrls 
+        : categoryImageUrl 
+          ? [categoryImageUrl] 
+          : [];
+      
+      // Set default coverImageUrl if not provided
+      const finalCoverImageUrl = coverImageUrl || categoryImageUrl;
+       
+      const event = await eventService.createEventWithPublish({
+        ...rest,
+        adminId: req.userId!,
+        location: {
+          type: 'Point',
+          // GeoJSON/MongoDB 2dsphere format: [longitude, latitude]
+          // This follows the standard: coordinates[0] = longitude, coordinates[1] = latitude
+          coordinates: [location.longitude, location.latitude],
+          address: location.address,
+          venueName: location.venueName,
+          city: location.city,
+          state: location.state,
+          landmark: location.landmark,
+        },
+        pricing: finalPricing,
+        imageUrls: finalImageUrls,
+        coverImageUrl: finalCoverImageUrl,
+        isPublished: true,
+      });
+      sendCreated(res, event, 'Event created with publish');
+    } catch (error) {
+      next(error);
+    }
   }
 
   async publish(

@@ -13,6 +13,7 @@ import {
   IEvent,
   IEventSummary,
   ICreateEventDTO,
+  ICreateEventWithPublishDTO,
   IUpdateEventDTO,
   IEventFilters,
   IEventParticipant,
@@ -84,7 +85,63 @@ export class EventService {
     return event;
   }
 
+  // event create with publish
+  async createEventWithPublish(data: ICreateEventWithPublishDTO): Promise<IEvent> {
+       // Check if user can create events (KYC verified)
+    const admin = await userRepository.findById(data.adminId);
+    if (!admin) {
+      throw new NotFoundError('User not found', 'USER_NOT_FOUND');
+    }
+
+    if (data.type === 'user_created' && admin.kyc.status !== 'approved') {
+      throw new KYCRequiredError('KYC verification required to create events');
+    }
+    console.log("data", data);
+
+    // Create event - transform adminId to admin object for the model
+    const { adminId, ...eventData } = data;
+    console.log("adminId", adminId);
+    console.log("eventData", eventData);
+    const createData = {
+      ...eventData,
+      admin: { userId: adminId },
+      status: 'upcoming' as const,
+      isPublished: true,
+      publishedAt: new Date(),
+      participantCount: 0,
+      waitlistCount: 0,
+    };
+    console.log("createData being sent to repository:", JSON.stringify(createData, null, 2));
+    const event = await eventRepository.create(createData as unknown as ICreateEventDTO);
+
+    // Update user stats
+    await userRepository.updateStats(data.adminId, {
+      eventsCreated: (admin.stats.eventsCreated || 0) + 1,
+    });
+
+    // Create event group chat
+    await chatRepository.createGroupChat({
+      eventId: event._id,
+      name: event.title,
+      imageUrl: event.coverImageUrl,
+      participantIds: [data.adminId],
+    });
+
+    logWithContext.event('Event created', { eventId: event._id, adminId: data.adminId });
+
+    return event;
+  }
+
   async publishEvent(eventId: string, userId: string): Promise<IEvent> {
+    // Check if user can create events (KYC verified)
+    const admin = await userRepository.findById(userId);
+    if (!admin) {
+      throw new NotFoundError('User not found', 'USER_NOT_FOUND');
+    }
+
+    if (admin.kyc.status !== 'approved') {
+      throw new KYCRequiredError('KYC verification required to create events');
+    }
     const event = await eventRepository.findById(eventId);
     if (!event) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
@@ -542,7 +599,7 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
-    if (event.admin.userId.toString() !== adminId) {
+    if (event.admin.userId.toString() !== adminId.toString()) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
     }
 
@@ -551,7 +608,13 @@ export class EventService {
       throw new NotFoundError('Join request not found', 'REQUEST_NOT_FOUND');
     }
 
-    if (participant.status !== 'pending_approval') {
+    // 'pending_approval',
+    // 'approved',
+    // 'rejected',
+    // 'leave_requested',
+    // 'left',
+    // 'removed',
+    if (participant.status !== 'rejected') {
       throw new BadRequestError('Request already processed', 'ALREADY_PROCESSED');
     }
 
