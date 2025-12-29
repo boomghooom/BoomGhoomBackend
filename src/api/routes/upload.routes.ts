@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { uploadController } from '../controllers/upload.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -43,10 +43,35 @@ const upload = multer({
   },
 });
 
+// Middleware to validate Content-Type before multer processing
+const validateContentType = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const contentType = req.headers['content-type'];
+  
+  if (!contentType || !contentType.includes('multipart/form-data')) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_CONTENT_TYPE',
+        message:
+          'Invalid Content-Type header. Request must use multipart/form-data. ' +
+          'When using fetch or axios, do not set Content-Type header manually - let the browser/library set it automatically.',
+      },
+    });
+    return;
+  }
+  
+  next();
+};
+
 // Upload route - requires authentication
 router.post(
   '/',
   authenticate,
+  validateContentType, // Validate Content-Type before multer
   upload.single('file'), // Accept single file with field name 'file'
   validate(uploadFileSchema, 'query'), // Validate query params
   uploadController.uploadFile.bind(uploadController)

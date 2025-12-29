@@ -12,7 +12,7 @@ Authorization: Bearer <your_jwt_token>
 ```
 
 ## Request Format
-- **Content-Type**: `multipart/form-data`
+- **Content-Type**: `multipart/form-data` (⚠️ **Important**: Do NOT set Content-Type header manually when using fetch/axios - let the browser/library set it automatically with the boundary parameter)
 - **Query Parameter**: `bucketType` (required)
   - `event` - Uploads to event images bucket
   - `document` - Uploads to documents bucket  
@@ -50,6 +50,12 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
+**Common Error Codes:**
+- `INVALID_CONTENT_TYPE` - Request must use `multipart/form-data` with proper boundary
+- `INVALID_FIELD_NAME` - File field must be named "file"
+- `FILE_TOO_LARGE` - File exceeds maximum allowed size
+- `BAD_REQUEST` - No file provided or invalid bucketType
+
 ## Frontend Example (JavaScript)
 
 ```javascript
@@ -63,6 +69,8 @@ async function uploadImage(file, bucketType) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${yourJwtToken}`
+        // ⚠️ DO NOT set 'Content-Type' header - let fetch set it automatically!
+        // Setting it manually will cause "Boundary not found" error
       },
       body: formData
     }
@@ -84,10 +92,14 @@ const imageUrl = await uploadImage(fileInput.files[0], 'event');
 ## cURL Example
 
 ```bash
+# cURL automatically sets Content-Type with boundary - no need to set it manually
 curl -X POST \
   'http://localhost:3000/api/v1/upload?bucketType=event' \
   -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
   -F 'file=@/path/to/image.jpg'
+
+# ❌ WRONG - Don't set Content-Type manually:
+# -H 'Content-Type: multipart/form-data'  # This will cause "Boundary not found" error
 ```
 
 ## Environment Variables Required

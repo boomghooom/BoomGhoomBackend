@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import mongoose from 'mongoose';
 import { AppError } from '../../shared/errors/AppError.js';
 import { HttpStatusCode } from '../../shared/constants/httpStatusCodes.js';
+import { FileUploadLimits } from '../../shared/constants/index.js';
 import { logger } from '../../shared/utils/logger.js';
 import { config } from '../../config/index.js';
 
@@ -136,6 +137,52 @@ export const errorHandler = (
       error: {
         code: 'INVALID_JSON',
         message: 'Invalid JSON in request body',
+      },
+    });
+    return;
+  }
+
+  // Handle Multer errors
+  if (error.name === 'MulterError') {
+    if (error.message.includes('Unexpected field')) {
+      res.status(HttpStatusCode.BAD_REQUEST).json({
+        success: false,
+        error: {
+          code: 'INVALID_FIELD_NAME',
+          message: 'Invalid field name. The file field must be named "file".',
+        },
+      });
+      return;
+    }
+    if (error.message.includes('File too large') || error.code === 'LIMIT_FILE_SIZE') {
+      res.status(HttpStatusCode.BAD_REQUEST).json({
+        success: false,
+        error: {
+          code: 'FILE_TOO_LARGE',
+          message: `File size exceeds the maximum allowed size of ${FileUploadLimits.MAX_FILE_SIZE / (1024 * 1024)}MB`,
+        },
+      });
+      return;
+    }
+    res.status(HttpStatusCode.BAD_REQUEST).json({
+      success: false,
+      error: {
+        code: 'UPLOAD_ERROR',
+        message: error.message || 'File upload failed',
+      },
+    });
+    return;
+  }
+
+  // Handle Multipart boundary errors (from busboy/multer)
+  if (error.message.includes('Boundary not found') || error.message.includes('Multipart')) {
+    res.status(HttpStatusCode.BAD_REQUEST).json({
+      success: false,
+      error: {
+        code: 'INVALID_CONTENT_TYPE',
+        message:
+          'Invalid Content-Type header. Please ensure the request uses multipart/form-data with proper boundary. ' +
+          'When using fetch or axios, do not set Content-Type header manually - let the browser/library set it automatically.',
       },
     });
     return;
