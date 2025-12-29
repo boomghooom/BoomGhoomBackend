@@ -96,6 +96,11 @@ export const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     region: getEnvVar('AWS_REGION', 'ap-south-1'),
     s3Bucket: getEnvVar('AWS_S3_BUCKET', 'boomghoom-assets'),
+    s3Buckets: {
+      event: getEnvVar('AWS_S3_BUCKET_EVENT', 'boomghoom-events'),
+      document: getEnvVar('AWS_S3_BUCKET_DOCUMENT', 'boomghoom-documents'),
+      profile: getEnvVar('AWS_S3_BUCKET_PROFILE', 'boomghoom-profiles'),
+    },
     s3Endpoint: process.env.AWS_S3_ENDPOINT || undefined,
   },
 
@@ -141,12 +146,14 @@ export const config = {
 
   // Business Rules (amounts in paise for precision)
   business: {
-    dueAmount: getEnvVarAsInt('DUE_AMOUNT', 2500), // ₹25 in paise
-    minWithdrawalAmount: getEnvVarAsInt('MIN_WITHDRAWAL_AMOUNT', 100000), // ₹1000 in paise
+    dueAmount: getEnvVarAsInt('DUE_AMOUNT', 25), // ₹25 in paise
+    minWithdrawalAmount: getEnvVarAsInt('MIN_WITHDRAWAL_AMOUNT', 1000), // ₹1000 in paise
     adminCommissionPercentage: getEnvVarAsInt('ADMIN_COMMISSION_PERCENTAGE', 80),
     leaveRequestWindowMinutes: getEnvVarAsInt('LEAVE_REQUEST_WINDOW_MINUTES', 60),
     gstPercentage: getEnvVarAsInt('GST_PERCENTAGE', 18),
     paymentGatewayFeePercentage: getEnvVarAsInt('PAYMENT_GATEWAY_FEE_PERCENTAGE', 2),
+    bookingCharge: getEnvVarAsInt('BOOKING_CHARGE', 15), // ₹15 in paise (default, can be overridden by sponsor)
+    eventsPrice: getEnvVarAsInt('EVENTS_PRICE', 19), // Event join price in paise (default ₹19)
   },
 
   // Deep Links
@@ -169,6 +176,24 @@ export const config = {
   // CORS
   cors: {
     origins: (process.env.CORS_ORIGINS || '*').split(','),
+  },
+
+  // Category Image URLs
+  categoryImages: {
+    sports: process.env.SPORTS_URL || '',
+    music: process.env.MUSIC_URL || '',
+    food: process.env.FOOD_URL || '',
+    travel: process.env.TRAVEL_URL || '',
+    games: process.env.GAMES_URL || '',
+    movies: process.env.MOVIES_URL || '',
+    art: process.env.ART_URL || '',
+    tech: process.env.TECH_URL || '',
+    fitness: process.env.FITNESS_URL || '',
+    nightlife: process.env.NIGHTLIFE_URL || '',
+    outdoor: process.env.OUTDOOR_URL || '',
+    learning: process.env.LEARNING_URL || '',
+    networking: process.env.NETWORKING_URL || '',
+    other: process.env.OTHER_URL || '',
   },
 } as const;
 

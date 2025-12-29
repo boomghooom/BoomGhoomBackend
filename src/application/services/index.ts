@@ -19,3 +19,12 @@ export * from './SocialService.js';
 // Chat service
 export * from './ChatService.js';
 
+// Pass service
+export * from './PassService.js';
+
+// Booking service
+export * from './BookingService.js';
+
+// Upload service
+export * from './UploadService.js';
+

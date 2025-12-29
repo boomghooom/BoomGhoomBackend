@@ -5,6 +5,9 @@ import eventRoutes from './event.routes.js';
 import financeRoutes from './finance.routes.js';
 import socialRoutes from './social.routes.js';
 import chatRoutes from './chat.routes.js';
+import bookingRoutes from './booking.routes.js';
+import passRoutes from './pass.routes.js';
+import uploadRoutes from './upload.routes.js';
 
 const router = Router();
 
@@ -24,6 +27,9 @@ router.use('/events', eventRoutes);
 router.use('/finance', financeRoutes);
 router.use('/social', socialRoutes);
 router.use('/chats', chatRoutes);
+router.use('/bookings', bookingRoutes);
+router.use('/passes', passRoutes);
+router.use('/upload', uploadRoutes);
 
 export default router;
 

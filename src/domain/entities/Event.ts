@@ -9,7 +9,16 @@ import { IUserSummary } from './User.js';
 
 export interface IEventLocation {
   type: 'Point';
-  coordinates: [number, number]; // [longitude, latitude]
+  /**
+   * GeoJSON coordinates array: [longitude, latitude]
+   * 
+   * IMPORTANT: Format is [longitude, latitude] NOT [latitude, longitude]
+   * This follows the GeoJSON and MongoDB 2dsphere standard.
+   * 
+   * @example [72.8777, 19.076] represents Mumbai (longitude: 72.8777, latitude: 19.076)
+   * @example coordinates[0] = longitude, coordinates[1] = latitude
+   */
+  coordinates: [number, number];
   address: string;
   venueName: string;
   city: string;
@@ -113,6 +122,10 @@ export interface IEventSummary {
   location: {
     venueName: string;
     city: string;
+    /**
+     * GeoJSON coordinates: [longitude, latitude]
+     * Format: coordinates[0] = longitude, coordinates[1] = latitude
+     */
     coordinates: [number, number];
   };
   startTime: Date;
@@ -141,6 +154,23 @@ export interface ICreateEventDTO {
   eligibility: IEventEligibility;
   pricing: IEventPricing;
   rules?: string[];
+}
+
+export interface ICreateEventWithPublishDTO {
+  type: EventType;
+  category: EventCategory;
+  title: string;
+  description: string;
+  location: IEventLocation;
+  startTime: Date;
+  endTime: Date;
+  imageUrls?: string[];
+  coverImageUrl?: string;
+  adminId: string;
+  eligibility: IEventEligibility;
+  pricing: IEventPricing;
+  rules?: string[];
+  isPublished: boolean;
 }
 
 export interface IUpdateEventDTO {

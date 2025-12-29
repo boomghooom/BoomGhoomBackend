@@ -13,3 +13,18 @@ export * from './Chat.model.js';
 // Social models
 export * from './Social.model.js';
 
+// Sponsor model
+export * from './Sponsor.model.js';
+
+// Staff model
+export * from './Staff.model.js';
+
+// Booking model
+export * from './Booking.model.js';
+
+// Payout model
+export * from './Payout.model.js';
+
+// Pass model
+export * from './Pass.model.js';
+

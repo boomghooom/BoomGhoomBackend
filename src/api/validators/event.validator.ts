@@ -13,7 +13,19 @@ export const createEventSchema = z.object({
     .min(20, 'Description must be at least 20 characters')
     .max(5000, 'Description must be less than 5000 characters'),
   location: z.object({
+    /**
+     * Latitude in decimal degrees (WGS84)
+     * Range: -90 to 90
+     * Example: 19.0760 (Mumbai)
+     */
     latitude: z.number().min(-90).max(90),
+    /**
+     * Longitude in decimal degrees (WGS84)
+     * Range: -180 to 180
+     * Example: 72.8777 (Mumbai)
+     * 
+     * NOTE: Internally stored as [longitude, latitude] array following GeoJSON standard
+     */
     longitude: z.number().min(-180).max(180),
     address: z.string().min(5, 'Address is required'),
     venueName: z.string().min(2, 'Venue name is required'),
@@ -49,6 +61,8 @@ export const createEventSchema = z.object({
   path: ['endTime'],
 });
 
+
+
 export const updateEventSchema = z.object({
   title: z
     .string()
@@ -62,7 +76,16 @@ export const updateEventSchema = z.object({
     .optional(),
   location: z
     .object({
+      /**
+       * Latitude in decimal degrees (WGS84)
+       * Range: -90 to 90
+       */
       latitude: z.number().min(-90).max(90),
+      /**
+       * Longitude in decimal degrees (WGS84)
+       * Range: -180 to 180
+       * NOTE: Internally stored as [longitude, latitude] array following GeoJSON standard
+       */
       longitude: z.number().min(-180).max(180),
       address: z.string().min(5),
       venueName: z.string().min(2),
@@ -103,7 +126,16 @@ export const eventFiltersSchema = z.object({
   type: z.enum(EventTypes).optional(),
   status: z.enum(EventStatuses).optional(),
   city: z.string().optional(),
+  /**
+   * Latitude in decimal degrees (WGS84)
+   * Range: -90 to 90
+   */
   latitude: z.coerce.number().min(-90).max(90).optional(),
+  /**
+   * Longitude in decimal degrees (WGS84)
+   * Range: -180 to 180
+   * NOTE: When used in queries, coordinates are stored as [longitude, latitude] following GeoJSON standard
+   */
   longitude: z.coerce.number().min(-180).max(180).optional(),
   maxDistance: z.coerce.number().positive().optional(),
   dateFrom: z.coerce.date().optional(),
