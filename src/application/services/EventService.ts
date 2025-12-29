@@ -304,7 +304,7 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
-    if (event.admin.userId.toString() !== userId) {
+    if (event.admin.userId.toString() !== userId.toString()) {
       throw new ForbiddenError('Not authorized to cancel this event', 'NOT_AUTHORIZED');
     }
 
