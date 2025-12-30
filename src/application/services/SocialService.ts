@@ -56,11 +56,13 @@ export class SocialService {
 
       const bothInEvent =
         event.participants.some(
-          (p) => p.userId.toString() === data.fromUserId && p.status === 'approved'
+          (p) => p.userId.toString() === data.fromUserId.toString() && p.status === 'approved'
         ) &&
         event.participants.some(
-          (p) => p.userId.toString() === data.toUserId && p.status === 'approved'
+          (p) => p.userId.toString() === data.toUserId.toString() && p.status === 'approved'
         );
+
+      console.log('bothInEvent', bothInEvent);
 
       if (!bothInEvent) {
         throw new ForbiddenError('Both users must be participants of the event');
@@ -103,9 +105,9 @@ export class SocialService {
 
     // Verify user is the recipient
     const isRecipient =
-      (friendship.user1Id.toString() === userId ||
-        friendship.user2Id.toString() === userId) &&
-      friendship.requestedBy.toString() !== userId;
+      (friendship.user1Id.toString() === userId.toString() ||
+        friendship.user2Id.toString() === userId.toString()) &&
+      friendship.requestedBy.toString() !== userId.toString();
 
     if (!isRecipient) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');

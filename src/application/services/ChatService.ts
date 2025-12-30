@@ -45,9 +45,9 @@ export class ChatService {
 
     // Verify user is participant or admin
     const isParticipant = event.participants.some(
-      (p) => p.userId.toString() === userId && p.status === 'approved'
+      (p) => p.userId.toString() === userId.toString() && p.status === 'approved'
     );
-    const isAdmin = event.admin.userId.toString() === userId;
+    const isAdmin = event.admin.userId.toString() === userId.toString();
 
     if (!isParticipant && !isAdmin) {
       throw new ForbiddenError('Not a participant', 'NOT_PARTICIPANT');
@@ -133,7 +133,7 @@ export class ChatService {
     // For direct chats, verify they are still friends
     if (chat.type === 'direct') {
       const otherParticipant = chat.participants.find(
-        (p) => p.userId.toString() !== data.senderId
+        (p) => p.userId.toString() !== data.senderId.toString()
       );
       if (otherParticipant) {
         const areFriends = await friendshipRepository.areFriends(
@@ -151,21 +151,21 @@ export class ChatService {
     if (!sender) {
       throw new NotFoundError('User not found', 'USER_NOT_FOUND');
     }
-
+    // console.log('sender', sender.fullName);
     // Create message
     const message = await messageRepository.create({
       ...data,
       senderName: sender.fullName,
       senderAvatar: sender.avatarUrl,
     } as ISendMessageDTO);
-
+    // console.log('message',message)
     // Update message with sender info
     const fullMessage: IMessage = {
       ...message,
       senderName: sender.fullName,
       senderAvatar: sender.avatarUrl,
     };
-
+    // console.log('fullMessage',fullMessage)
     // Update chat last message
     await chatRepository.updateLastMessage(data.chatId, fullMessage);
 

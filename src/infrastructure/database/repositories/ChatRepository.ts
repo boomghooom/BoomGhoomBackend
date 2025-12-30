@@ -230,7 +230,8 @@ export class MessageRepository extends BaseRepository<
     const message = new this.model({
       chatId: data.chatId,
       senderId: data.senderId,
-      senderName: '', // Will be populated by service
+      senderName: data.senderName, // Will be populated by service
+      senderAvatar: data.senderAvatar, // Will be populated by service
       type: data.type,
       content: data.content,
       imageUrl: data.imageUrl,
