@@ -369,7 +369,7 @@ export class EventService {
     }
 
     // Check if user is the admin
-    if (event.admin.userId.toString() === userId) {
+    if (event.admin.userId.toString() === userId.toString()) {
       throw new BadRequestError('Admin cannot join their own event', 'ADMIN_CANNOT_JOIN');
     }
 
@@ -797,11 +797,11 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
-    if (event.admin.userId.toString() !== adminId) {
+    if (event.admin.userId.toString() !== adminId.toString()) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
     }
 
-    if (event.status !== 'ongoing' && event.status !== 'upcoming') {
+    if (event.status !== 'completed' && event.status !== 'cancelled') {
       throw new BadRequestError('Event cannot be completed', 'INVALID_STATUS');
     }
 
