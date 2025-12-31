@@ -232,7 +232,7 @@ export class SocialService {
     const friends: IFriendSummary[] = await Promise.all(
       result.data.map(async (friendship) => {
         const friendId =
-          friendship.user1Id.toString() === userId
+          friendship.user1Id.toString() === userId.toString()
             ? friendship.user2Id.toString()
             : friendship.user1Id.toString();
 

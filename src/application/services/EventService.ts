@@ -184,6 +184,8 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
+    
+
     // Cache event
     await redisClient.set(CacheKeys.EVENT(eventId), event, CacheTTL.MEDIUM);
 
