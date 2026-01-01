@@ -61,6 +61,7 @@ export interface IEventRepository {
     session?: ClientSession
   ): Promise<IEvent | null>;
   getAdminPreviousParticipants(adminId: string): Promise<string[]>;
+  getMutualEventsCount(userId1: string, userId2: string): Promise<number>;
 }
 
 export class EventRepository
@@ -359,6 +360,40 @@ export class EventRepository
     });
 
     return Array.from(participantSet);
+  }
+
+  /**
+   * Get count of events where both users are approved participants
+   * This represents mutual events - events both users have participated in together
+   * 
+   * Query Logic:
+   * - Find events where userId1 is in participants array with status 'approved'
+   * - AND userId2 is also in participants array with status 'approved'
+   * - Both conditions must be true for the same event
+   */
+  async getMutualEventsCount(userId1: string, userId2: string): Promise<number> {
+    const count = await this.model.countDocuments({
+      $and: [
+        {
+          'participants': {
+            $elemMatch: {
+              userId: new Types.ObjectId(userId1),
+              status: 'approved',
+            },
+          },
+        },
+        {
+          'participants': {
+            $elemMatch: {
+              userId: new Types.ObjectId(userId2),
+              status: 'approved',
+            },
+          },
+        },
+      ],
+    });
+
+    return count;
   }
 
   private buildFilterQuery(filters?: IEventFilters): FilterQuery<IEventDocument> {
