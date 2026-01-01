@@ -12,6 +12,7 @@ export class ChatController {
     try {
       const { page, limit } = req.query;
       const result = await chatService.getUserChatsPaginated(req.userId!, { page, limit });
+      // console.log('result', result.data);
       sendPaginated(res, result.data, {
         page: result.page,
         limit: result.limit,

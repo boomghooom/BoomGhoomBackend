@@ -262,6 +262,7 @@ export class SocialService {
 
         const friend = await userRepository.findById(friendId);
         const mutualCount = await friendshipRepository.getMutualFriends(userId, friendId);
+        const mutualEventsCount = await eventRepository.getMutualEventsCount(userId, friendId);
 
         return {
           _id: friendId,
@@ -279,7 +280,7 @@ export class SocialService {
               }
             : ({} as IUserSummary),
           mutualFriendsCount: mutualCount.length,
-          mutualEventsCount: 0, // TODO: Calculate
+          mutualEventsCount,
           connectedViaEvent: friendship.eventId
             ? { eventId: friendship.eventId.toString(), eventTitle: '' }
             : undefined,

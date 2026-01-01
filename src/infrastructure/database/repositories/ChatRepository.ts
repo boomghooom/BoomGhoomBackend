@@ -1,4 +1,4 @@
-import { Types, ClientSession } from 'mongoose';
+import { Types } from 'mongoose';
 import { BaseRepository } from './BaseRepository.js';
 import {
   ChatModel,
@@ -15,6 +15,7 @@ import {
   ISendMessageDTO,
   IMessageQuery,
 } from '../../../domain/entities/Chat.js';
+import { userRepository } from './UserRepository.js';
 import { IPaginationOptions, IPaginatedResult } from '../../../domain/repositories/IBaseRepository.js';
 
 // Chat Repository
@@ -71,8 +72,9 @@ export class ChatRepository extends BaseRepository<
   }
 
   async findUserChats(userId: string): Promise<IChatSummary[]> {
-    const chats = await ChatModel.findUserChats(userId);
-    return chats.map((chat) => this.toChatSummary(chat.toObject(), userId));
+    const chats = await ChatModel.findUserChats(userId)
+      .populate('participants.userId', 'fullName displayName avatarUrl gender kyc.status stats.averageRating isOnline');
+    return Promise.all(chats.map((chat) => this.toChatSummary(chat.toObject(), userId)));
   }
 
   async findUserChatsPaginated(
@@ -84,12 +86,18 @@ export class ChatRepository extends BaseRepository<
         'participants.userId': new Types.ObjectId(userId),
         isActive: true,
       },
-      options
+      options,
+      {
+        populate: {
+          path: 'participants.userId',
+          select: 'fullName displayName avatarUrl gender kyc.status stats.averageRating isOnline',
+        },
+      }
     );
 
     return {
       ...result,
-      data: result.data.map((chat) => this.toChatSummary(chat, userId)),
+      data: await Promise.all(result.data.map((chat) => this.toChatSummary(chat, userId))),
     };
   }
 
@@ -189,21 +197,70 @@ export class ChatRepository extends BaseRepository<
     });
   }
 
-  private toChatSummary(chat: IChat, currentUserId: string): IChatSummary {
+  private async toChatSummary(chat: IChat, currentUserId: string): Promise<IChatSummary> {
+    // Helper to get userId string from participant (handles both ObjectId and populated user)
+    const getUserIdString = (participant: any): string => {
+      if (!participant?.userId) return '';
+      if (typeof participant.userId === 'string') return participant.userId;
+      if (participant.userId._id) return participant.userId._id.toString();
+      return participant.userId.toString();
+    };
+
     const otherParticipant = chat.type === 'direct'
-      ? chat.participants.find((p) => p.userId.toString() !== currentUserId)
+      ? chat.participants.find((p) => getUserIdString(p) !== currentUserId)
       : undefined;
 
     const currentParticipant = chat.participants.find(
-      (p) => p.userId.toString() === currentUserId
+      (p) => getUserIdString(p) === currentUserId
     );
+
+    // Handle populated user data or fetch if missing
+    let otherUser = otherParticipant?.user;
+    if (!otherUser && otherParticipant) {
+      // Check if userId is populated (Mongoose replaces ObjectId with populated document)
+      const populatedUser = typeof otherParticipant.userId === 'object' && 
+                            otherParticipant.userId && 
+                            'fullName' in otherParticipant.userId
+        ? otherParticipant.userId as any
+        : null;
+
+      if (populatedUser) {
+        // Use populated user data
+        otherUser = {
+          _id: populatedUser._id?.toString() || getUserIdString(otherParticipant),
+          fullName: populatedUser.fullName,
+          displayName: populatedUser.displayName,
+          avatarUrl: populatedUser.avatarUrl,
+          gender: populatedUser.gender,
+          isOnline: populatedUser.isOnline,
+          kycVerified: populatedUser.kyc?.status === 'approved',
+          averageRating: populatedUser.stats?.averageRating || 0,
+        };
+      } else {
+        // Fetch user if not populated
+        const userId = getUserIdString(otherParticipant);
+        const user = await userRepository.findById(userId);
+        if (user) {
+          otherUser = {
+            _id: user._id,
+            fullName: user.fullName,
+            displayName: user.displayName,
+            avatarUrl: user.avatarUrl,
+            gender: user.gender,
+            isOnline: user.isOnline,
+            kycVerified: user.kyc.status === 'approved',
+            averageRating: user.stats.averageRating,
+          };
+        }
+      }
+    }
 
     return {
       _id: chat._id,
       type: chat.type,
-      name: chat.name || (otherParticipant?.user?.fullName ?? 'Unknown'),
-      imageUrl: chat.imageUrl || otherParticipant?.user?.avatarUrl,
-      otherParticipant: otherParticipant?.user,
+      name: chat.name || otherUser?.fullName || 'Unknown',
+      imageUrl: chat.imageUrl || otherUser?.avatarUrl,
+      otherParticipant: otherUser,
       lastMessage: chat.lastMessage
         ? {
             content: chat.lastMessage.content,

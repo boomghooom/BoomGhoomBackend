@@ -42,7 +42,8 @@ export class BaseRepository<
 
   async findPaginated(
     query: FilterQuery<TDocument>,
-    options: IPaginationOptions
+    options: IPaginationOptions,
+    populateOptions?: { path: string; select?: string } | Array<{ path: string; select?: string }>
   ): Promise<IPaginatedResult<T>> {
     const page = Math.max(1, options.page || PaginationDefaults.PAGE);
     const limit = Math.min(
@@ -51,12 +52,25 @@ export class BaseRepository<
     );
     const skip = (page - 1) * limit;
 
+    let queryBuilder = this.model
+      .find(query)
+      .sort(options.sort || { createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Apply populate if provided
+    if (populateOptions) {
+      if (Array.isArray(populateOptions)) {
+        populateOptions.forEach((pop) => {
+          queryBuilder = queryBuilder.populate(pop.path, pop.select);
+        });
+      } else {
+        queryBuilder = queryBuilder.populate(populateOptions.path, populateOptions.select);
+      }
+    }
+
     const [documents, total] = await Promise.all([
-      this.model
-        .find(query)
-        .sort(options.sort || { createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
+      queryBuilder,
       this.model.countDocuments(query),
     ]);
 
