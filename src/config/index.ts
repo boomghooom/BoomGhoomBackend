@@ -146,14 +146,14 @@ export const config = {
 
   // Business Rules (amounts in paise for precision)
   business: {
-    dueAmount: getEnvVarAsInt('DUE_AMOUNT', 25), // ₹25 in paise
-    minWithdrawalAmount: getEnvVarAsInt('MIN_WITHDRAWAL_AMOUNT', 1000), // ₹1000 in paise
-    adminCommissionPercentage: getEnvVarAsInt('ADMIN_COMMISSION_PERCENTAGE', 80),
+    dueAmount: getEnvVarAsInt('DUE_AMOUNT', 20), // ₹25 in paise
+    minWithdrawalAmount: getEnvVarAsInt('MIN_WITHDRAWAL_AMOUNT', 100), // ₹1000 in paise
+    adminCommissionPercentage: getEnvVarAsInt('ADMIN_COMMISSION_PERCENTAGE', 50),
     leaveRequestWindowMinutes: getEnvVarAsInt('LEAVE_REQUEST_WINDOW_MINUTES', 60),
     gstPercentage: getEnvVarAsInt('GST_PERCENTAGE', 18),
     paymentGatewayFeePercentage: getEnvVarAsInt('PAYMENT_GATEWAY_FEE_PERCENTAGE', 2),
     bookingCharge: getEnvVarAsInt('BOOKING_CHARGE', 15), // ₹15 in paise (default, can be overridden by sponsor)
-    eventsPrice: getEnvVarAsInt('EVENTS_PRICE', 19), // Event join price in paise (default ₹19)
+    eventsPrice: getEnvVarAsInt('EVENTS_PRICE', 20), // Event join price in paise (default ₹19)
   },
 
   // Deep Links

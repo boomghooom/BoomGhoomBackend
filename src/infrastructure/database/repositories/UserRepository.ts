@@ -20,7 +20,7 @@ export interface IUserRepository {
     data: Partial<IUser['finance']>,
     session?: ClientSession
   ): Promise<IUser | null>;
-  updateStats(id: string, data: Partial<IUser['stats']>): Promise<IUser | null>;
+  updateStats(id: string, data: Partial<IUser['stats']>, session?: ClientSession): Promise<IUser | null>;
   updateKYCStatus(
     id: string,
     status: IUser['kyc']['status'],
@@ -116,7 +116,7 @@ export class UserRepository
     return user ? (user.toObject() as IUser) : null;
   }
 
-  async updateStats(id: string, data: Partial<IUser['stats']>): Promise<IUser | null> {
+  async updateStats(id: string, data: Partial<IUser['stats']>, session?: ClientSession): Promise<IUser | null> {
     const updateData: Record<string, unknown> = {};
     
     if (data.eventsJoined !== undefined) updateData['stats.eventsJoined'] = data.eventsJoined;
@@ -129,6 +129,7 @@ export class UserRepository
     const user = await this.model.findByIdAndUpdate(id, { $set: updateData }, {
       new: true,
       runValidators: true,
+      session,
     });
     return user ? (user.toObject() as IUser) : null;
   }

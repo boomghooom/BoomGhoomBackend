@@ -33,14 +33,20 @@ import { logger } from '../../shared/utils/logger.js';
 export class SocialService {
   // Friend Management
   async sendFriendRequest(data: ISendFriendRequestDTO): Promise<IFriendship> {
-    if (data.fromUserId === data.toUserId) {
+    console.log('data',data)
+    
+    // Normalize IDs to strings for comparison
+    const fromUserIdStr = data.fromUserId?.toString() || String(data.fromUserId);
+    const toUserIdStr = data.toUserId?.toString() || String(data.toUserId);
+    
+    if (fromUserIdStr === toUserIdStr) {
       throw new BadRequestError('Cannot send friend request to yourself');
     }
 
-    // Check if both users exist
+    // Check if both users exist (using normalized string IDs)
     const [fromUser, toUser] = await Promise.all([
-      userRepository.findById(data.fromUserId),
-      userRepository.findById(data.toUserId),
+      userRepository.findById(fromUserIdStr),
+      userRepository.findById(toUserIdStr),
     ]);
 
     if (!fromUser || !toUser) {
@@ -54,23 +60,36 @@ export class SocialService {
         throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
       }
 
+      // Use already normalized IDs for consistent comparison
       const bothInEvent =
         event.participants.some(
-          (p) => p.userId.toString() === data.fromUserId.toString() && p.status === 'approved'
+          (p) => {
+            const participantUserIdStr = p.userId?.toString() || String(p.userId);
+            return participantUserIdStr === fromUserIdStr && p.status === 'approved';
+          }
         ) &&
         event.participants.some(
-          (p) => p.userId.toString() === data.toUserId.toString() && p.status === 'approved'
+          (p) => {
+            const participantUserIdStr = p.userId?.toString() || String(p.userId);
+            return participantUserIdStr === toUserIdStr && p.status === 'approved';
+          }
         );
 
       console.log('bothInEvent', bothInEvent);
+      console.log('fromUserIdStr', fromUserIdStr);
+      console.log('toUserIdStr', toUserIdStr);
+      console.log('participants', event.participants.map(p => ({
+        userId: p.userId?.toString() || String(p.userId),
+        status: p.status
+      })));
 
       if (!bothInEvent) {
         throw new ForbiddenError('Both users must be participants of the event');
       }
     }
 
-    // Check existing friendship
-    const existing = await friendshipRepository.findFriendship(data.fromUserId, data.toUserId);
+    // Check existing friendship (using normalized string IDs)
+    const existing = await friendshipRepository.findFriendship(fromUserIdStr, toUserIdStr);
     if (existing) {
       if (existing.status === 'accepted') {
         throw new ConflictError('Already friends', 'ALREADY_FRIENDS');
@@ -83,15 +102,20 @@ export class SocialService {
       }
     }
 
-    const friendship = await friendshipRepository.create(data);
+    // Create friendship with normalized IDs
+    const friendship = await friendshipRepository.create({
+      ...data,
+      fromUserId: fromUserIdStr,
+      toUserId: toUserIdStr,
+    });
 
     // Send notification
     await notificationRepository.create({
-      userId: data.toUserId,
+      userId: toUserIdStr,
       type: 'friend_request',
       title: 'New Friend Request',
       body: `${fromUser.fullName} wants to be your friend`,
-      data: { userId: data.fromUserId, friendshipId: friendship._id },
+      data: { userId: fromUserIdStr, friendshipId: friendship._id },
     });
 
     return friendship;
@@ -284,7 +308,8 @@ export class SocialService {
             ? friendship.user2Id.toString()
             : friendship.user1Id.toString()
         );
-
+        console.log('fromUser',fromUser)
+        console.log('toUser',toUser)
         return {
           _id: friendship._id,
           fromUser: fromUser

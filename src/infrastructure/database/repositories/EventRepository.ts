@@ -36,7 +36,7 @@ export interface IEventRepository {
   findUpcoming(city: string, limit?: number): Promise<IEventSummary[]>;
   findFeatured(city: string, limit?: number): Promise<IEventSummary[]>;
   updateById(id: string, data: IUpdateEventDTO): Promise<IEvent | null>;
-  updateStatus(id: string, status: EventStatus, data?: Partial<IEvent>): Promise<IEvent | null>;
+  updateStatus(id: string, status: EventStatus, data?: Partial<IEvent>, session?: ClientSession): Promise<IEvent | null>;
   addParticipant(
     eventId: string,
     participant: IEventParticipant,
@@ -46,7 +46,8 @@ export interface IEventRepository {
     eventId: string,
     userId: string,
     status: ParticipationStatus,
-    data?: Partial<IEventParticipant>
+    data?: Partial<IEventParticipant>,
+    session?: ClientSession
   ): Promise<IEvent | null>;
   removeParticipant(eventId: string, userId: string): Promise<IEvent | null>;
   isUserParticipant(eventId: string, userId: string): Promise<boolean>;
@@ -218,7 +219,8 @@ export class EventRepository
   async updateStatus(
     id: string,
     status: EventStatus,
-    data?: Partial<IEvent>
+    data?: Partial<IEvent>,
+    session?: ClientSession
   ): Promise<IEvent | null> {
     const updateData: Record<string, unknown> = { status };
     
@@ -231,7 +233,7 @@ export class EventRepository
     const event = await this.model.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, session }
     );
     return event ? (event.toObject() as IEvent) : null;
   }
@@ -253,7 +255,8 @@ export class EventRepository
     eventId: string,
     userId: string,
     status: ParticipationStatus,
-    data?: Partial<IEventParticipant>
+    data?: Partial<IEventParticipant>,
+    session?: ClientSession
   ): Promise<IEvent | null> {
     const updateFields: Record<string, unknown> = {
       'participants.$.status': status,
@@ -282,7 +285,7 @@ export class EventRepository
     const event = await this.model.findOneAndUpdate(
       { _id: eventId, 'participants.userId': userId },
       { $set: updateFields },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, session }
     );
     return event ? (event.toObject() as IEvent) : null;
   }
