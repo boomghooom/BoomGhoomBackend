@@ -333,6 +333,7 @@ export class EventController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    console.log('req.params.userId',req.params)
     try {
       const event = await eventService.approveJoinRequest(
         req.params.id,

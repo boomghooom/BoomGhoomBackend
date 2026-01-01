@@ -184,6 +184,8 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
+
+
     // Cache event
     await redisClient.set(CacheKeys.EVENT(eventId), event, CacheTTL.MEDIUM);
 
@@ -369,7 +371,7 @@ export class EventService {
     }
 
     // Check if user is the admin
-    if (event.admin.userId.toString() === userId) {
+    if (event.admin.userId.toString() === userId.toString()) {
       throw new BadRequestError('Admin cannot join their own event', 'ADMIN_CANNOT_JOIN');
     }
 
@@ -497,7 +499,9 @@ export class EventService {
     }
 
     const participant = await eventRepository.getParticipant(eventId, userId);
+    console.log('participant',userId,eventId)
     if (!participant) {
+      console.log('participant not found')
       throw new NotFoundError('Join request not found', 'REQUEST_NOT_FOUND');
     }
 
@@ -518,7 +522,9 @@ export class EventService {
       const updatedEvent = await eventRepository.updateParticipantStatus(
         eventId,
         userId,
-        'approved'
+        'approved',
+        undefined,
+        session
       );
 
       if (!updatedEvent) {
@@ -535,7 +541,7 @@ export class EventService {
             eventTitle: event.title,
             amount: config.business.dueAmount,
             status: 'pending',
-          });
+          }, session);
 
           await userRepository.updateFinance(
             userId,
@@ -552,7 +558,7 @@ export class EventService {
 
           await userRepository.updateStats(userId, {
             eventsJoined: (user.stats.eventsJoined || 0) + 1,
-          });
+          }, session);
         }
       }
 
@@ -797,12 +803,12 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
-    if (event.admin.userId.toString() !== adminId) {
+    if (event.admin.userId.toString() !== adminId.toString()) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
     }
-
-    if (event.status !== 'ongoing' && event.status !== 'upcoming') {
-      throw new BadRequestError('Event cannot be completed', 'INVALID_STATUS');
+    console.log('event',event.status)
+    if (event.status == 'completed' || event.status == 'cancelled') {
+      throw new BadRequestError('Event already completed or cancelled', 'INVALID_STATUS');
     }
 
     const session = await mongoose.startSession();
@@ -810,7 +816,7 @@ export class EventService {
 
     try {
       // Update event status
-      const updatedEvent = await eventRepository.updateStatus(eventId, 'completed');
+      const updatedEvent = await eventRepository.updateStatus(eventId, 'completed', undefined, session);
       if (!updatedEvent) {
         throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
       }
@@ -840,7 +846,7 @@ export class EventService {
           participantsCount: approvedParticipants.length,
           participantsDueCleared: participantsWithClearedDues,
           duePerParticipant: config.business.dueAmount,
-        });
+        }, session);
 
         // If all dues cleared, make commission available
         if (participantsWithClearedDues === approvedParticipants.length) {
@@ -875,46 +881,60 @@ export class EventService {
       if (admin) {
         await userRepository.updateStats(event.admin.userId.toString(), {
           eventsCompleted: (admin.stats.eventsCompleted || 0) + 1,
-        });
+        }, session);
       }
 
       // Update stats for participants
       for (const participant of event.participants.filter((p) => p.status === 'approved')) {
-        await userRepository.updateStats(participant.userId.toString(), {
-          eventsCompleted:
-            ((await userRepository.findById(participant.userId.toString()))?.stats.eventsCompleted || 0) + 1,
-        });
+        const participantUser = await userRepository.findById(participant.userId.toString());
+        if (participantUser) {
+          await userRepository.updateStats(participant.userId.toString(), {
+            eventsCompleted: (participantUser.stats.eventsCompleted || 0) + 1,
+          }, session);
+        }
       }
 
       await session.commitTransaction();
+      await session.endSession();
 
-      // Invalidate caches
-      await this.invalidateEventCaches(eventId, event.location.city);
-      await redisClient.del(CacheKeys.USER(event.admin.userId.toString()));
+      // Non-transactional operations (outside transaction)
+      try {
+        // Invalidate caches
+        await this.invalidateEventCaches(eventId, event.location.city);
+        await redisClient.del(CacheKeys.USER(event.admin.userId.toString()));
 
-      // Notify participants
-      const notifications = event.participants
-        .filter((p) => p.status === 'approved')
-        .map((p) => ({
-          userId: p.userId.toString(),
-          type: 'event_completed' as const,
-          title: 'Event Completed! 🎉',
-          body: `${event.title} has been completed. Rate your experience!`,
-          data: { eventId },
-        }));
+        // Notify participants
+        const notifications = event.participants
+          .filter((p) => p.status === 'approved')
+          .map((p) => ({
+            userId: p.userId.toString(),
+            type: 'event_completed' as const,
+            title: 'Event Completed! 🎉',
+            body: `${event.title} has been completed. Rate your experience!`,
+            data: { eventId },
+          }));
 
-      if (notifications.length > 0) {
-        await notificationRepository.createMany(notifications);
+        if (notifications.length > 0) {
+          await notificationRepository.createMany(notifications);
+        }
+
+        logWithContext.event('Event completed', { eventId, adminId });
+      } catch (nonTxError) {
+        // Log non-transactional errors but don't fail the request
+        logger.error('Error in non-transactional operations after event completion', {
+          error: nonTxError,
+          eventId,
+        });
       }
-
-      logWithContext.event('Event completed', { eventId, adminId });
 
       return updatedEvent;
     } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
+      // Check if transaction is still in progress before aborting
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       await session.endSession();
+      throw error;
     }
   }
 

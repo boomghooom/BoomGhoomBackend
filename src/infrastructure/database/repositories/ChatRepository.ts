@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Types, ClientSession } from 'mongoose';
 import { BaseRepository } from './BaseRepository.js';
 import {
   ChatModel,
@@ -93,12 +93,16 @@ export class ChatRepository extends BaseRepository<
     };
   }
 
-  async addParticipant(chatId: string, userId: string): Promise<IChat | null> {
+  async addParticipant(chatId: string, userId: string, session?: ClientSession): Promise<IChat | null> {
     const chat = await this.model.findById(chatId);
     if (!chat) return null;
 
     chat.addParticipant(userId);
-    await chat.save();
+    if (session) {
+      await chat.save({ session });
+    } else {
+      await chat.save();
+    }
     return chat.toObject() as IChat;
   }
 
@@ -230,7 +234,8 @@ export class MessageRepository extends BaseRepository<
     const message = new this.model({
       chatId: data.chatId,
       senderId: data.senderId,
-      senderName: '', // Will be populated by service
+      senderName: data.senderName, // Will be populated by service
+      senderAvatar: data.senderAvatar, // Will be populated by service
       type: data.type,
       content: data.content,
       imageUrl: data.imageUrl,

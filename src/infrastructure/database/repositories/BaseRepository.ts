@@ -19,9 +19,9 @@ export class BaseRepository<
     this.model = model;
   }
 
-  async create(data: CreateDTO): Promise<T> {
+  async create(data: CreateDTO, session?: import('mongoose').ClientSession): Promise<T> {
     const document = new this.model(data);
-    const saved = await document.save();
+    const saved = session ? await document.save({ session }) : await document.save();
     return saved.toObject() as T;
   }
 
