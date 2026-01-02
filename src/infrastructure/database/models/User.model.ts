@@ -177,7 +177,6 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
     },
     email: {
       type: String,
-      sparse: true,
       required: true,
       unique: true,
       lowercase: true,
