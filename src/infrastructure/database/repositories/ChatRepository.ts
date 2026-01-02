@@ -73,8 +73,9 @@ export class ChatRepository extends BaseRepository<
 
   async findUserChats(userId: string): Promise<IChatSummary[]> {
     const chats = await ChatModel.findUserChats(userId)
-      .populate('participants.userId', 'fullName displayName avatarUrl gender kyc.status stats.averageRating isOnline');
-    return Promise.all(chats.map((chat) => this.toChatSummary(chat.toObject(), userId)));
+      .populate('participants.userId', 'fullName displayName avatarUrl gender kyc.status stats.averageRating isOnline')
+      .lean();
+    return Promise.all(chats.map((chat: any) => this.toChatSummary(chat, userId)));
   }
 
   async findUserChatsPaginated(
@@ -201,58 +202,132 @@ export class ChatRepository extends BaseRepository<
     // Helper to get userId string from participant (handles both ObjectId and populated user)
     const getUserIdString = (participant: any): string => {
       if (!participant?.userId) return '';
-      if (typeof participant.userId === 'string') return participant.userId;
-      if (participant.userId._id) return participant.userId._id.toString();
-      return participant.userId.toString();
+      
+      // If userId is populated (it's a user document object)
+      if (typeof participant.userId === 'object' && participant.userId !== null) {
+        // Check if it has _id property (populated user document)
+        if (participant.userId._id) {
+          return participant.userId._id.toString();
+        }
+        // If it's an ObjectId, convert to string
+        if (participant.userId.toString && typeof participant.userId.toString === 'function') {
+          return participant.userId.toString();
+        }
+      }
+      
+      // If it's already a string
+      if (typeof participant.userId === 'string') {
+        return participant.userId;
+      }
+      
+      return '';
     };
 
+    // Normalize currentUserId to ensure consistent comparison
+    const normalizedCurrentUserId = currentUserId.toString();
+
     const otherParticipant = chat.type === 'direct'
-      ? chat.participants.find((p) => getUserIdString(p) !== currentUserId)
+      ? chat.participants.find((p) => {
+          const participantUserId = getUserIdString(p);
+          return participantUserId && participantUserId !== normalizedCurrentUserId;
+        })
       : undefined;
 
     const currentParticipant = chat.participants.find(
-      (p) => getUserIdString(p) === currentUserId
+      (p) => {
+        const participantUserId = getUserIdString(p);
+        return participantUserId === normalizedCurrentUserId;
+      }
     );
-
+    
+    // Debug logs
+    console.log('currentUserId:', normalizedCurrentUserId);
+    console.log('participants:', chat.participants.map(p => ({
+      userId: p.userId,
+      userIdString: getUserIdString(p),
+      isCurrentUser: getUserIdString(p) === normalizedCurrentUserId
+    })));
+    console.log('currentParticipant:', currentParticipant ? getUserIdString(currentParticipant) : 'undefined');
+    console.log('otherParticipant:', otherParticipant ? getUserIdString(otherParticipant) : 'undefined');
     // Handle populated user data or fetch if missing
     let otherUser = otherParticipant?.user;
     if (!otherUser && otherParticipant) {
       // Check if userId is populated (Mongoose replaces ObjectId with populated document)
-      const populatedUser = typeof otherParticipant.userId === 'object' && 
-                            otherParticipant.userId && 
-                            'fullName' in otherParticipant.userId
-        ? otherParticipant.userId as any
-        : null;
-
-      if (populatedUser) {
-        // Use populated user data
-        otherUser = {
-          _id: populatedUser._id?.toString() || getUserIdString(otherParticipant),
-          fullName: populatedUser.fullName,
-          displayName: populatedUser.displayName,
-          avatarUrl: populatedUser.avatarUrl,
-          gender: populatedUser.gender,
-          isOnline: populatedUser.isOnline,
-          kycVerified: populatedUser.kyc?.status === 'approved',
-          averageRating: populatedUser.stats?.averageRating || 0,
-        };
+      const otherParticipantUserId = getUserIdString(otherParticipant);
+      
+      // Safety check: ensure we're not using the current user's data
+      if (otherParticipantUserId === normalizedCurrentUserId) {
+        console.error('ERROR: otherParticipant userId matches currentUserId!', {
+          otherParticipantUserId,
+          normalizedCurrentUserId,
+          participants: chat.participants.map(p => ({
+            userId: getUserIdString(p),
+            isCurrent: getUserIdString(p) === normalizedCurrentUserId
+          }))
+        });
+        // Skip and use fallback
+        otherUser = undefined;
       } else {
-        // Fetch user if not populated
-        const userId = getUserIdString(otherParticipant);
-        const user = await userRepository.findById(userId);
-        if (user) {
-          otherUser = {
-            _id: user._id,
-            fullName: user.fullName,
-            displayName: user.displayName,
-            avatarUrl: user.avatarUrl,
-            gender: user.gender,
-            isOnline: user.isOnline,
-            kycVerified: user.kyc.status === 'approved',
-            averageRating: user.stats.averageRating,
-          };
+        const populatedUser = typeof otherParticipant.userId === 'object' && 
+                              otherParticipant.userId && 
+                              'fullName' in otherParticipant.userId
+          ? otherParticipant.userId as any
+          : null;
+
+        if (populatedUser) {
+          // Double-check the populated user is not the current user
+          const populatedUserId = populatedUser._id?.toString() || otherParticipantUserId;
+          if (populatedUserId === normalizedCurrentUserId) {
+            console.error('ERROR: Populated user matches current user!', {
+              populatedUserId,
+              normalizedCurrentUserId
+            });
+            otherUser = undefined;
+          } else {
+            // Use populated user data
+            otherUser = {
+              _id: populatedUserId,
+              fullName: populatedUser.fullName,
+              displayName: populatedUser.displayName,
+              avatarUrl: populatedUser.avatarUrl,
+              gender: populatedUser.gender,
+              isOnline: populatedUser.isOnline,
+              kycVerified: populatedUser.kyc?.status === 'approved',
+              averageRating: populatedUser.stats?.averageRating || 0,
+            };
+          }
+        } else {
+          // Fetch user if not populated
+          const user = await userRepository.findById(otherParticipantUserId);
+          if (user) {
+            // Final safety check
+            if (user._id === normalizedCurrentUserId) {
+              console.error('ERROR: Fetched user matches current user!', {
+                userId: user._id,
+                normalizedCurrentUserId
+              });
+              otherUser = undefined;
+            } else {
+              otherUser = {
+                _id: user._id,
+                fullName: user.fullName,
+                displayName: user.displayName,
+                avatarUrl: user.avatarUrl,
+                gender: user.gender,
+                isOnline: user.isOnline,
+                kycVerified: user.kyc.status === 'approved',
+                averageRating: user.stats.averageRating,
+              };
+            }
+          }
         }
       }
+    }
+    
+    // Final validation: if otherUser is still the current user, don't use it
+    if (otherUser && otherUser._id === normalizedCurrentUserId) {
+      console.error('ERROR: otherUser._id matches currentUserId, setting to undefined');
+      otherUser = undefined;
     }
 
     return {

@@ -60,23 +60,49 @@ export class OTPService {
   }
 
   /**
+   * Format phone number for SMS (adds country code if missing)
+   * India (91) is the default country code
+   */
+  private formatPhoneForSMS(phoneNumber: string): string {
+    // Remove all non-numeric characters
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // If already has country code (starts with 91 and is 12 digits)
+    if (cleaned.startsWith('91') && cleaned.length === 12) {
+      return cleaned;
+    }
+    
+    // If it's a 10-digit number, add India country code (91)
+    if (cleaned.length === 10) {
+      return `91${cleaned}`;
+    }
+    
+    // Return as is if it doesn't match expected patterns
+    // The SMS provider will handle validation
+    return cleaned;
+  }
+
+  /**
    * Send OTP via SMS API
    */
   private async sendSMS(phoneNumber: string, otp: string): Promise<boolean> {
     try {
-        console.log('OTP is', otp);
+      const formattedNumber = this.formatPhoneForSMS(phoneNumber);
+      console.log('OTP is', otp);
+      console.log('Original phone:', phoneNumber, 'Formatted phone:', formattedNumber);
+      
       const body = `Your mobile verification OTP for Connecting Hearts is ${otp}. Please do not share it with anyone. Powered by SHUPRA`;
-      const url = `${process.env.SMS_API_URL}?api_id=${process.env.SMS_API_ID}&api_password=${process.env.SMS_API_PASSWORD}&sms_type=${process.env.SMS_TYPE}&sms_encoding=text&sender=${process.env.SMS_SENDER}&number=${phoneNumber}&message=${encodeURIComponent(body)}&template_id=${process.env.SMS_TEMPLATE_ID}`;
+      const url = `${process.env.SMS_API_URL}?api_id=${process.env.SMS_API_ID}&api_password=${process.env.SMS_API_PASSWORD}&sms_type=${process.env.SMS_TYPE}&sms_encoding=text&sender=${process.env.SMS_SENDER}&number=${formattedNumber}&message=${encodeURIComponent(body)}&template_id=${process.env.SMS_TEMPLATE_ID}`;
+      console.log('URL is', url);
       
       const smsResp = await axios.get(url);
+      console.log('SMS Response is', smsResp.data);
       
       if (smsResp?.data?.code === 200) {
-        console.log('SMS Response is', smsResp.data);
-        logWithContext.auth('OTP sent successfully', { phoneNumber });
+        logWithContext.auth('OTP sent successfully', { phoneNumber, formattedNumber });
         return true;
       } else {
-        console.log('SMS Response is', smsResp.data);
-        logger.error('SMS API returned error', { response: smsResp.data, phoneNumber });
+        logger.error('SMS API returned error', { response: smsResp.data, phoneNumber, formattedNumber });
         return false;
       }
     } catch (error) {
@@ -119,14 +145,14 @@ export class OTPService {
     await redisClient.set(pendingKey, data, config.sms.otpExpiry + 60); // Extra minute buffer
 
     // Send SMS
-    const sent = await this.sendSMS(phoneNumber, otp);
+    // const sent = await this.sendSMS(phoneNumber, otp);
 
-    if (!sent) {
-      // In development, log the OTP for testing
-      if (config.isDevelopment) {
-        logger.info(`[DEV] OTP for ${phoneNumber}: ${otp}`);
-      }
-    }
+    // if (!sent) {
+    //   // In development, log the OTP for testing
+    //   if (config.isDevelopment) {
+    //     logger.info(`[DEV] OTP for ${phoneNumber}: ${otp}`);
+    //   }
+    // }
 
     logWithContext.auth('Signup OTP requested', { phoneNumber, attempt: attempts });
 
