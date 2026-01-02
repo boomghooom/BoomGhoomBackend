@@ -62,17 +62,25 @@ export class AuthService {
   }
 
   async signup(data: ISignupData): Promise<{ user: IUser; tokens: IAuthTokens }> {
-    // Check if active user already exists
-    const existingUser = await userRepository.findByPhone(data.phoneNumber);
-    if (existingUser) {
+    // Check if active user already exists with this phone number
+    const existingUserByPhone = await userRepository.findByPhone(data.phoneNumber);
+    if (existingUserByPhone) {
       throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
     }
 
-    // Check if a soft-deleted user exists with this phone number
-    // We need to check the model directly since findByPhone filters out deleted users
+    // Check if active user already exists with this email
+    const existingUserByEmail = await userRepository.findByEmail(data.email);
+    if (existingUserByEmail) {
+      throw new ConflictError('User with this email already exists', 'EMAIL_EXISTS');
+    }
+
+    // Check if a soft-deleted user exists with this phone number or email
+    // We need to check the model directly since findByPhone/findByEmail filter out deleted users
     const softDeletedUser = await UserModel.findOne({
-      phoneNumber: data.phoneNumber,
-      isDeleted: true,
+      $or: [
+        { phoneNumber: data.phoneNumber, isDeleted: true },
+        { email: data.email.toLowerCase().trim(), isDeleted: true },
+      ],
     });
 
     // Validate referral code if provided
@@ -146,7 +154,10 @@ export class AuthService {
         ) {
           // Try to find and restore if it's a soft-deleted user
           const raceConditionUser = await UserModel.findOne({
-            phoneNumber: data.phoneNumber,
+            $or: [
+              { phoneNumber: data.phoneNumber },
+              { email: data.email.toLowerCase().trim() },
+            ],
           });
           if (raceConditionUser?.isDeleted) {
             const updateData: Record<string, unknown> = {

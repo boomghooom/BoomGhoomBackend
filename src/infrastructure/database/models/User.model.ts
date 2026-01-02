@@ -177,7 +177,8 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
     },
     email: {
       type: String,
-      sparse: true,
+      required: true,
+      unique: true,
       lowercase: true,
       trim: true,
       index: true,
@@ -290,6 +291,7 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
 UserSchema.index({ 'location.coordinates': '2dsphere' });
 UserSchema.index({ 'location.city': 1, isDeleted: 1, isBlocked: 1 });
 UserSchema.index({ createdAt: -1 });
+UserSchema.index({ email: 1, isDeleted: 1, phoneNumber: 1 });
 UserSchema.index({ 'kyc.status': 1 });
 
 // Pre-save hook to hash password
