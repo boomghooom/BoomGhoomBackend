@@ -104,7 +104,9 @@ export class ChatService {
   }
 
   async getChatById(chatId: string, userId: string): Promise<IChat> {
-    const chat = await chatRepository.findById(chatId);
+    // Fetch chat with populated participant user data
+    const chat = await chatRepository.findByIdWithParticipants(chatId);
+    console.log('chat', chat);
     if (!chat) {
       throw new NotFoundError('Chat not found', 'CHAT_NOT_FOUND');
     }

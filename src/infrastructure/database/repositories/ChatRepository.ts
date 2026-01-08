@@ -29,6 +29,56 @@ export class ChatRepository extends BaseRepository<
     super(ChatModel);
   }
 
+  async findByIdWithParticipants(chatId: string): Promise<IChat | null> {
+    const chat = await this.model
+      .findById(chatId)
+      .populate('participants.userId', 'fullName displayName avatarUrl gender kyc.status stats.averageRating isOnline lastActiveAt')
+      .lean();
+    return chat ? this.transformChatWithParticipants(chat as any) : null;
+  }
+
+  private transformChatWithParticipants(chat: any): IChat {
+    const participants = chat.participants.map((p: any) => {
+      const userId = typeof p.userId === 'object' && p.userId?._id
+        ? p.userId._id.toString()
+        : (typeof p.userId === 'object' ? p.userId.toString() : p.userId);
+
+      // If userId is populated, extract user data
+      let user: any = undefined;
+      if (typeof p.userId === 'object' && p.userId && 'fullName' in p.userId) {
+        user = {
+          _id: p.userId._id?.toString() || userId,
+          fullName: p.userId.fullName,
+          displayName: p.userId.displayName,
+          avatarUrl: p.userId.avatarUrl,
+          gender: p.userId.gender,
+          isOnline: p.userId.isOnline ?? false,
+          kycVerified: p.userId.kyc?.status === 'approved',
+          averageRating: p.userId.stats?.averageRating || 0,
+        };
+      }
+
+      return {
+        userId,
+        user: user || undefined,
+        joinedAt: p.joinedAt,
+        lastReadAt: p.lastReadAt,
+        isMuted: p.isMuted || false,
+        mutedUntil: p.mutedUntil,
+        lastActiveAt: typeof p.userId === 'object' && p.userId?.lastActiveAt 
+          ? p.userId.lastActiveAt 
+          : undefined,
+      };
+    });
+
+    return {
+      ...chat,
+      _id: chat._id.toString(),
+      participants,
+      eventId: chat.eventId?.toString(),
+    } as IChat;
+  }
+
   async createDirectChat(data: ICreateDirectChatDTO): Promise<IChat> {
     const existingChat = await ChatModel.findDirectChat(data.userId1, data.userId2);
     if (existingChat) {
@@ -175,6 +225,7 @@ export class ChatRepository extends BaseRepository<
       isActive: true,
     });
     return chat !== null;
+    console.log('chat', chat);
   }
 
   async getUnreadCount(chatId: string, userId: string): Promise<number> {

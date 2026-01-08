@@ -350,11 +350,12 @@ export class EventService {
       eventRepository.findById(eventId),
       userRepository.findById(userId),
     ]);
-
+    console.log("event", event?.participantCount);
     if (!event) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
-
+    // console.log("event.participantCount", event.participantCount);
+    // process.exit(0);
     if (!user) {
       throw new NotFoundError('User not found', 'USER_NOT_FOUND');
     }
@@ -395,7 +396,7 @@ export class EventService {
     if (!event.pricing?.isFree && user.finance.dues > 0) {
       throw new DuesPendingError();
     }
-
+  
     // Create participant entry
     const participant: IEventParticipant = {
       userId,

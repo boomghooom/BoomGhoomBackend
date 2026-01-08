@@ -8,6 +8,7 @@ export interface IChatParticipant {
   lastReadAt?: Date;
   isMuted: boolean;
   mutedUntil?: Date;
+  lastActiveAt?: Date; // Last active timestamp from user
 }
 
 export interface IChat {
