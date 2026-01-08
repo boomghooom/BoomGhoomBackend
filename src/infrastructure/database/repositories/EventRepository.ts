@@ -246,10 +246,10 @@ export class EventRepository
   ): Promise<IEvent | null> {
     const event = await this.model.findByIdAndUpdate(
       eventId,
-      { $push: { participants: participant } },
+      { $push: { participants: participant } , $inc: { participantCount: 1 }  },
       { new: true, runValidators: true, session }
     );
-    return event ? (event.toObject() as IEvent) : null;
+    return event ? (event.toObject() as unknown as IEvent) : null;
   }
 
   async updateParticipantStatus(

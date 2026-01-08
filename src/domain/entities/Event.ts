@@ -68,6 +68,7 @@ export interface IEventParticipant {
   approvedAt?: Date;
   rejectedAt?: Date;
   rejectionReason?: string;
+  participantCount: number;
   hasPendingDues: boolean;
   duesCleared: boolean;
   duesClearedAt?: Date;
