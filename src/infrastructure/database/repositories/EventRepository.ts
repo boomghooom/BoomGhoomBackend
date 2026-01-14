@@ -105,6 +105,7 @@ export class EventRepository
   ): Promise<IPaginatedResult<IEventSummary>> {
     const baseQuery = this.buildFilterQuery(filters);
     baseQuery.status = { $in: ['upcoming', 'ongoing'] };
+    baseQuery.startTime = { $gt: new Date() };
     baseQuery.isPublished = true;
 
     // Query with $near for fetching sorted results by distance
