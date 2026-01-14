@@ -68,7 +68,7 @@ export class UserRepository
     const user = await this.model
       .findOne({ phoneNumber: phoneNumber.toString(), isDeleted: false })
       .select('+password');
-    console.log('User foundee:', user);
+    // console.log('User foundee:', user);
     return user ? (user.toObject() as unknown as IUser) : null;
   }
 
