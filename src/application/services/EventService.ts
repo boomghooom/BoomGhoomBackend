@@ -268,7 +268,44 @@ export class EventService {
       throw new BadRequestError('Cannot update completed or cancelled events', 'INVALID_STATUS');
     }
 
-    const updatedEvent = await eventRepository.updateById(eventId, data);
+    // Transform location data if provided
+    let updateData = { ...data };
+    if (data.location) {
+      const locationData = data.location as any;
+      
+      // If location has latitude/longitude (from validator), transform to coordinates
+      if ('latitude' in locationData && 'longitude' in locationData) {
+        updateData = {
+          ...updateData,
+          location: {
+            type: 'Point' as const,
+            // GeoJSON/MongoDB 2dsphere format: [longitude, latitude]
+            coordinates: [locationData.longitude, locationData.latitude],
+            address: locationData.address,
+            venueName: locationData.venueName,
+            city: locationData.city,
+            ...(locationData.state && { state: locationData.state }),
+            ...(locationData.landmark && { landmark: locationData.landmark }),
+          },
+        };
+      } else if (!('coordinates' in locationData)) {
+        // If location is provided but doesn't have coordinates or lat/lng,
+        // merge with existing location to preserve coordinates
+        updateData = {
+          ...updateData,
+          location: {
+            ...event.location,
+            ...locationData,
+            // Ensure type and coordinates are preserved
+            type: 'Point' as const,
+            coordinates: event.location.coordinates,
+          },
+        };
+      }
+      // If location already has coordinates, use it as is
+    }
+
+    const updatedEvent = await eventRepository.updateById(eventId, updateData);
     if (!updatedEvent) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
