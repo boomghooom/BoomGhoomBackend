@@ -24,11 +24,18 @@ export interface IAuthTokens {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  userIosVersion?: string;
+  userAndroidVersion?: string;
+  currentIosVersion?: string;
+  currentAndroidVersion?: string;
 }
 
 export interface ILoginCredentials {
   phoneNumber: string;
   password: string;
+  userIosVersion?: string;
+  userAndroidVersion?: string;
+  fcmToken?: string;
 }
 
 export interface ISignupData {
@@ -205,9 +212,7 @@ export class AuthService {
   }
 
   async login(credentials: ILoginCredentials): Promise<{ user: IUser; tokens: IAuthTokens }> {
-    console.log('Login attempt for phone:', credentials.phoneNumber);
     const user = await userRepository.findByPhoneWithPassword(credentials.phoneNumber);
-    console.log('User found:', user ? 'Yes' : 'No');
     if (!user) {
       throw new UnauthorizedError('Invalid credentials', 'INVALID_CREDENTIALS');
     }
@@ -225,8 +230,29 @@ export class AuthService {
 
     // Update last active
     await userRepository.setOnlineStatus(user._id, true);
+    if (credentials.userIosVersion) {
+      await userRepository.updateById(user._id, { userIosVersion: credentials.userIosVersion } as never);
+    }
+    if (credentials.userAndroidVersion) {
+      await userRepository.updateById(user._id, { userAndroidVersion: credentials.userAndroidVersion } as never);
+    }
+    if (credentials.fcmToken) {
+      // Get existing FCM tokens or empty array
+      const existingTokens = (user.fcmTokens || []) as string[];
+      
+      // Check if token already exists
+      if (existingTokens.includes(credentials.fcmToken)) {
+        logWithContext.auth('FCM token already exists', { userId: user._id, fcmToken: credentials.fcmToken });
+      } else {
+        // Add new token to existing tokens and remove duplicates
+        const updatedTokens = [...existingTokens, credentials.fcmToken];
+        const uniqueFcmTokens = [...new Set(updatedTokens)];
+        logWithContext.auth('Adding FCM token', { userId: user._id, fcmToken: credentials.fcmToken, totalTokens: uniqueFcmTokens.length });
+        await userRepository.updateById(user._id, { fcmTokens: uniqueFcmTokens } as never);
+      }
+    } 
 
-    logWithContext.auth('User logged in', { userId: user._id });
+    logWithContext.auth('User logged in', { userId: user._id, fcmTokens: user.fcmTokens });
 
     return { user, tokens };
   }
@@ -370,7 +396,7 @@ export class AuthService {
     }
   }
 
-  async refreshTokens(refreshToken: string): Promise<IAuthTokens> {
+  async refreshTokens(refreshToken: string, userIosVersion?: string, userAndroidVersion?: string, fcmToken?: string): Promise<IAuthTokens> {
     try {
       // Verify refresh token
       const payload = jwt.verify(refreshToken, config.jwt.refreshSecret) as ITokenPayload;
@@ -400,6 +426,24 @@ export class AuthService {
 
       // Generate new tokens
       const tokens = await this.generateTokens(user);
+      if (userIosVersion) {
+        await userRepository.updateById(user._id, { userIosVersion: userIosVersion } as never);
+      }
+      if (userAndroidVersion) {
+        await userRepository.updateById(user._id, { userAndroidVersion: userAndroidVersion } as never);
+      }
+      if (fcmToken) {
+        // token login logic same here 
+        const existingTokens = (user.fcmTokens || []) as string[];
+        if (existingTokens.includes(fcmToken)) {
+          logWithContext.auth('FCM token already exists', { userId: user._id, fcmToken: fcmToken });
+        } else {
+          const updatedTokens = [...existingTokens, fcmToken];
+          const uniqueFcmTokens = [...new Set(updatedTokens)];
+          // logWithContext.auth('Adding FCM token', { userId: user._id, fcmToken: fcmToken, totalTokens: uniqueFcmTokens.length });
+          await userRepository.updateById(user._id, { fcmTokens: uniqueFcmTokens } as never);
+        }
+      }
 
       return tokens;
     } catch (error) {
@@ -520,6 +564,12 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresIn,
+      userIosVersion: user.userIosVersion,
+      userAndroidVersion: user.userAndroidVersion,
+      /// letest uploded version of the app for ios and android . it will be fetched from the database in future when
+      //  we will have a versioning system for the app. for now we are using hardcoded version
+      currentIosVersion: '1.0.0',
+      currentAndroidVersion: '1.0.0',
     };
   }
 

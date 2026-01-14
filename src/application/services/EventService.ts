@@ -350,7 +350,6 @@ export class EventService {
       eventRepository.findById(eventId),
       userRepository.findById(userId),
     ]);
-    console.log("event", event?.participantCount);
     if (!event) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }

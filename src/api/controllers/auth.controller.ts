@@ -142,7 +142,8 @@ export class AuthController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const tokens = await authService.refreshTokens(req.body.refreshToken);
+      const tokens = await authService.refreshTokens(req.body.refreshToken, 
+        req.body.userIosVersion, req.body.userAndroidVersion, req.body.fcmToken);
       sendSuccess(res, tokens, { message: 'Tokens refreshed' });
     } catch (error) {
       next(error);

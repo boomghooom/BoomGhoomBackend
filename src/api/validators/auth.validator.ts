@@ -50,7 +50,10 @@ export const loginSchema = z.object({
     .string()
     .regex(phoneRegex, 'Invalid Indian phone number')
     .transform((val) => val.trim()),
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(1, 'Password is required'), //userAndroidVersion userIosVersion
+  userIosVersion: z.string().optional(),
+  userAndroidVersion: z.string().optional(),
+  fcmToken: z.string().optional(),
 });
 
 export const googleAuthSchema = z.object({
@@ -69,7 +72,10 @@ export const appleAuthSchema = z.object({
 });
 
 export const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: z.string().min(1, 'Refresh token is required'), 
+  userIosVersion: z.string().optional(),  
+  userAndroidVersion: z.string().optional(),
+  fcmToken: z.string().optional(),
 });
 
 export const changePasswordSchema = z.object({

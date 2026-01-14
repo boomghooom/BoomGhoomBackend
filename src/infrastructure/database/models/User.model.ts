@@ -10,6 +10,8 @@ export interface IUserDocument extends Omit<IUser, '_id'>, Document {
     _id: string;
     fullName: string;
     displayName?: string;
+    userAndroidVersion?: string;
+    userIosVersion?: string;
     avatarUrl?: string;
     gender?: string;
     isOnline: boolean;
@@ -256,6 +258,14 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
       type: String,
       sparse: true,
       index: true,
+    },
+    userAndroidVersion: {
+      type: String,
+      default: '',
+    },
+    userIosVersion: { 
+      type: String,
+      default: '',
     },
     fcmTokens: {
       type: [String],
