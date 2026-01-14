@@ -401,6 +401,13 @@ export class EventService {
       throw new BadRequestError('Event is not open for joining', 'EVENT_NOT_OPEN');
     }
 
+    // also check if the event start time is pass out then no one can join the event
+    if (event.startTime < new Date()) {
+      throw new BadRequestError('Event has already started', 'EVENT_ALREADY_STARTED');
+    }
+
+    
+
     // Check if user is already a participant
     const isParticipant = await eventRepository.isUserParticipant(eventId, userId);
     if (isParticipant) {
