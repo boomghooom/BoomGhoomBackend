@@ -3,7 +3,7 @@ import multer from 'multer';
 import { uploadController } from '../controllers/upload.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { uploadFileSchema } from '../validators/upload.validator.js';
+import { deleteFileSchema, uploadFileSchema } from '../validators/upload.validator.js';
 import { FileUploadLimits } from '../../shared/constants/index.js';
 
 const router = Router();
@@ -76,6 +76,18 @@ router.post(
   validate(uploadFileSchema, 'query'), // Validate query params
   uploadController.uploadFile.bind(uploadController)
 );
+
+// delete file from s3 by url of the file // file url is in the request body, bucketType is in query
+router.delete(
+  '/delete-file',
+  authenticate,
+  // validate(deleteFileSchema, 'body'), // Validate body (url)
+  // validate(uploadFileSchema, 'query'), // Validate query (bucketType)
+  uploadController.deleteFileByUrl.bind(uploadController)
+);
+
+
+
 
 export default router;
 

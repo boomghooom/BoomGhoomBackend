@@ -9,6 +9,7 @@ import {
 import { notificationRepository, inviteRepository } from '../../infrastructure/database/repositories/SocialRepository.js';
 import { chatRepository } from '../../infrastructure/database/repositories/ChatRepository.js';
 import { redisClient } from '../../config/redis.js';
+import { pushNotificationService } from './PushNotificationService.js';
 import {
   IEvent,
   IEventSummary,
@@ -326,7 +327,13 @@ export class EventService {
         }));
 
       if (notifications.length > 0) {
-        await notificationRepository.createMany(notifications);
+        const createdNotifications = await notificationRepository.createMany(notifications);
+        // Send push notifications for all created notifications
+        for (const notification of createdNotifications) {
+          await pushNotificationService.sendNotification(notification).catch((error) => {
+            logger.error(`Failed to send push notification for event update (${notification._id}):`, error);
+          });
+        }
       }
     }
 
@@ -374,7 +381,13 @@ export class EventService {
       }));
 
     if (notifications.length > 0) {
-      await notificationRepository.createMany(notifications);
+      const createdNotifications = await notificationRepository.createMany(notifications);
+      // Send push notifications for all created notifications
+      for (const notification of createdNotifications) {
+        await pushNotificationService.sendNotification(notification).catch((error) => {
+          logger.error(`Failed to send push notification for event cancellation (${notification._id}):`, error);
+        });
+      }
     }
 
     logWithContext.event('Event cancelled', { eventId, reason });
@@ -509,12 +522,16 @@ export class EventService {
 
       // Send notification to admin
       if (event.eligibility.requiresApproval) {
-        await notificationRepository.create({
+        const notification = await notificationRepository.create({
           userId: event.admin.userId.toString(),
           type: 'event_join_request',
           title: 'New Join Request',
           body: `${user.fullName} wants to join ${event.title}`,
           data: { eventId, userId },
+        });
+        // Send push notification
+        await pushNotificationService.sendNotification(notification).catch((error) => {
+          logger.error('Failed to send push notification for join request:', error);
         });
       }
 
@@ -619,12 +636,16 @@ export class EventService {
       await redisClient.del(CacheKeys.USER(userId));
 
       // Notify user
-      await notificationRepository.create({
+      const notification = await notificationRepository.create({
         userId,
         type: 'event_join_approved',
         title: 'Request Approved! 🎉',
         body: `You've been approved to join ${event.title}`,
         data: { eventId },
+      });
+      // Send push notification
+      await pushNotificationService.sendNotification(notification).catch((error) => {
+        logger.error('Failed to send push notification for join approval:', error);
       });
 
       logWithContext.event('Join request approved', { eventId, userId, adminId });
@@ -664,7 +685,7 @@ export class EventService {
     // 'leave_requested',
     // 'left',
     // 'removed',
-    if (participant.status !== 'rejected') {
+    if (participant.status === 'rejected') {
       throw new BadRequestError('Request already processed', 'ALREADY_PROCESSED');
     }
 
@@ -680,7 +701,7 @@ export class EventService {
     }
 
     // Notify user
-    await notificationRepository.create({
+    const notification = await notificationRepository.create({
       userId,
       type: 'event_join_rejected',
       title: 'Request Not Approved',
@@ -688,6 +709,10 @@ export class EventService {
         ? `Your request to join ${event.title} was not approved: ${reason}`
         : `Your request to join ${event.title} was not approved`,
       data: { eventId },
+    });
+    // Send push notification
+    await pushNotificationService.sendNotification(notification).catch((error) => {
+      logger.error('Failed to send push notification for join rejection:', error);
     });
 
     logWithContext.event('Join request rejected', { eventId, userId, adminId, reason });
@@ -732,12 +757,16 @@ export class EventService {
 
     // Notify admin
     const user = await userRepository.findById(userId);
-    await notificationRepository.create({
+    const notification = await notificationRepository.create({
       userId: event.admin.userId.toString(),
       type: 'event_update',
       title: 'Leave Request',
       body: `${user?.fullName || 'A participant'} has requested to leave ${event.title}`,
       data: { eventId, userId },
+    });
+    // Send push notification
+    await pushNotificationService.sendNotification(notification).catch((error) => {
+      logger.error('Failed to send push notification for leave request:', error);
     });
 
     logWithContext.event('Leave request submitted', { eventId, userId });
@@ -755,7 +784,7 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
-    if (event.admin.userId.toString() !== adminId) {
+    if (event.admin.userId.toString() !== adminId.toString()) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
     }
 
@@ -822,12 +851,16 @@ export class EventService {
       await redisClient.del(CacheKeys.USER(userId));
 
       // Notify user
-      await notificationRepository.create({
+      const notification = await notificationRepository.create({
         userId,
         type: 'event_update',
         title: 'Leave Approved',
         body: `Your request to leave ${event.title} has been approved`,
         data: { eventId },
+      });
+      // Send push notification
+      await pushNotificationService.sendNotification(notification).catch((error) => {
+        logger.error('Failed to send push notification for leave approval:', error);
       });
 
       logWithContext.event('Leave request approved', { eventId, userId, adminId });
@@ -839,6 +872,53 @@ export class EventService {
     } finally {
       await session.endSession();
     }
+  }
+
+  async rejectLeaveRequest(
+    eventId: string,
+    adminId: string,
+    userId: string,
+    reason?: string
+  ): Promise<IEvent> {
+    const event = await eventRepository.findById(eventId);
+    if (!event) {
+      throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
+    }
+    if (event.admin.userId.toString() !== adminId.toString()) {
+      throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
+    }
+    const participant = await eventRepository.getParticipant(eventId, userId);
+    if (!participant) {
+      throw new NotFoundError('Participant not found', 'NOT_FOUND');
+    }
+
+    // if leave request is rejected, set the status to approved
+    const updatedEvent = await eventRepository.updateParticipantStatus(
+      eventId,
+      userId,
+      'approved',
+      { rejectionReason: reason }
+    );
+    if (!updatedEvent) {
+      throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
+    }
+
+    // Notify user
+    const notification = await notificationRepository.create({
+      userId,
+      type: 'event_update',
+      title: 'Leave Request Rejected',
+      body: `Your request to leave ${event.title} has been rejected`,
+      data: { eventId },
+    });
+    // Send push notification
+    await pushNotificationService.sendNotification(notification).catch((error) => {
+      logger.error('Failed to send push notification for leave rejection:', error);
+    });
+
+    logWithContext.event('Leave request rejected', { eventId, userId, adminId, reason });
+
+    return updatedEvent;
   }
 
   async completeEvent(eventId: string, adminId: string): Promise<IEvent> {
@@ -959,7 +1039,13 @@ export class EventService {
           }));
 
         if (notifications.length > 0) {
-          await notificationRepository.createMany(notifications);
+          const createdNotifications = await notificationRepository.createMany(notifications);
+          // Send push notifications for all created notifications
+          for (const notification of createdNotifications) {
+            await pushNotificationService.sendNotification(notification).catch((error) => {
+              logger.error(`Failed to send push notification for event completion (${notification._id}):`, error);
+            });
+          }
         }
 
         logWithContext.event('Event completed', { eventId, adminId });
@@ -1040,7 +1126,13 @@ export class EventService {
       data: { eventId },
     }));
 
-    await notificationRepository.createMany(notifications);
+    const createdNotifications = await notificationRepository.createMany(notifications);
+    // Send push notifications for all created notifications
+    for (const notification of createdNotifications) {
+      await pushNotificationService.sendNotification(notification).catch((error) => {
+        logger.error(`Failed to send push notification for event invitation (${notification._id}):`, error);
+      });
+    }
 
     logWithContext.event('Bulk invites sent', {
       eventId,

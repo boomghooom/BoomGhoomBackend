@@ -121,6 +121,11 @@ router.post(
   eventController.approveLeave.bind(eventController)
 );
 
+router.post(
+  '/:id/reject-leave/:userId',
+  eventController.rejectLeave.bind(eventController)
+);
+
 // Invites
 router.post(
   '/:id/bulk-invite',

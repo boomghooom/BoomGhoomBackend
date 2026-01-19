@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { getUploadService } from '../../application/services/UploadService.js';
+import { UploadService } from '../../application/services/UploadService.js';
 import { sendSuccess } from '../../shared/utils/response.js';
 import { BadRequestError } from '../../shared/errors/AppError.js';
 
-const uploadService = getUploadService();
+const uploadService = new UploadService();
 
 export class UploadController {
   async uploadFile(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -41,6 +41,24 @@ export class UploadController {
         fileSize: result.fileSize,
         mimeType: result.mimeType,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteFileByUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+
+    try {
+      const url = req.body.url;
+      // Get bucket type from query parameter
+      const bucketType = req.query.bucketType as 'event' | 'document' | 'profile';
+      if (!bucketType || !['event', 'document', 'profile'].includes(bucketType)) {
+        throw new BadRequestError(
+          'Invalid or missing bucketType. Must be one of: event, document, profile'
+        );
+      }
+      await uploadService.deleteFileByUrl(url, bucketType);
+      sendSuccess(res, null, { message: 'File deleted successfully' });
     } catch (error) {
       next(error);
     }

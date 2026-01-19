@@ -27,3 +27,6 @@ export * from './BookingService.js';
 
 // Upload service
 export * from './UploadService.js';
+
+// Push notification service
+export * from './PushNotificationService.js';

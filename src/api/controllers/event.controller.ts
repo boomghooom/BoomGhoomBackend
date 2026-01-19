@@ -394,6 +394,23 @@ export class EventController {
     }
   }
 
+  async rejectLeave(
+    req: Request<{ id: string; userId: string }>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const event = await eventService.rejectLeaveRequest(
+        req.params.id, 
+        req.userId!, 
+        req.params.userId,
+         req.body.reason);
+      sendSuccess(res, event, { message: 'Leave request rejected' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getPreviousParticipants(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const participants = await eventService.getAdminPreviousParticipants(req.userId!);
