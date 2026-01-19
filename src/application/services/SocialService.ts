@@ -372,7 +372,7 @@ export class SocialService {
       throw new NotFoundError('Notification not found', 'NOT_FOUND');
     }
 
-    if (notification.userId !== userId) {
+    if (notification.userId !== userId.toString()) {
       throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
     }
 

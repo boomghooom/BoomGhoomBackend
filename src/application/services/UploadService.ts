@@ -151,7 +151,7 @@ export class UploadService {
   }
 
   /**
-   * Delete file from S3
+   * Delete file from S3 by key
    */
   async deleteFile(key: string, bucketType: UploadBucketType): Promise<void> {
     const bucketName = this.getBucketName(bucketType);
@@ -164,15 +164,26 @@ export class UploadService {
       throw error;
     }
   }
-}
 
-// Singleton instance
-let uploadServiceInstance: UploadService | null = null;
-
-export const getUploadService = (): UploadService => {
-  if (!uploadServiceInstance) {
-    uploadServiceInstance = new UploadService();
+  /**
+   * Delete file from S3 by url
+   */
+  async deleteFileByUrl(url: string, bucketType: UploadBucketType): Promise<void> {
+    // url is like https://boomghoom-events.s3.ap-south-1.amazonaws.com/event/69547717fc6d8a1d8d0b9d09/70a5e682-3590-4e96-9f1f-d46e20b06866-1000178391.jpg
+    // so we need to get the key from the url
+    let key: string;
+    try {
+      // Remove query string if any
+      const urlObj = new URL(url);
+      // Get pathname and remove the leading "/"
+      key = urlObj.pathname.startsWith('/') ? urlObj.pathname.substring(1) : urlObj.pathname;
+      if (!key || key.endsWith('/')) {
+        throw new BadRequestError('Invalid url', 'INVALID_URL');
+      }
+    } catch (err) {
+      throw new BadRequestError('Invalid url', 'INVALID_URL');
+    }
+    
+    await this.deleteFile(key, bucketType);
   }
-  return uploadServiceInstance;
-};
-
+}

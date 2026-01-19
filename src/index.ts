@@ -120,6 +120,17 @@ const startServer = async (): Promise<void> => {
       logger.info(`📍 Environment: ${config.env}`);
       logger.info(`🔗 URL: ${config.appUrl}/api/${config.apiVersion}`);
       logger.info(`📡 WebSocket: Ready`);
+    }).on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`❌ Port ${config.port} is already in use. Please:`);
+        logger.error(`   1. Stop the process using port ${config.port}`);
+        logger.error(`   2. Or change the PORT in your .env file`);
+        logger.error(`   3. On Windows, find the process: netstat -ano | findstr :${config.port}`);
+        logger.error(`   4. Kill it: taskkill /F /PID <PID>`);
+      } else {
+        logger.error('Failed to start server:', error);
+      }
+      process.exit(1);
     });
 
   } catch (error) {
