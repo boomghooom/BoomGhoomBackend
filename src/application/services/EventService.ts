@@ -168,6 +168,12 @@ export class EventService {
     // Invalidate caches
     await this.invalidateEventCaches(eventId, event.location.city);
 
+    // Update cache with fresh data
+    const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+    if (freshEvent) {
+      await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+    }
+
     logWithContext.event('Event published', { eventId });
 
     return updatedEvent;
@@ -314,6 +320,12 @@ export class EventService {
     // Invalidate caches
     await this.invalidateEventCaches(eventId, event.location.city);
 
+    // Update cache with fresh data
+    const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+    if (freshEvent) {
+      await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+    }
+
     // Notify participants about update
     if (event.status === 'upcoming' && event.participants.length > 0) {
       const notifications = event.participants
@@ -368,6 +380,12 @@ export class EventService {
 
     // Invalidate caches
     await this.invalidateEventCaches(eventId, event.location.city);
+
+    // Update cache with fresh data
+    const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+    if (freshEvent) {
+      await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+    }
 
     // Notify all participants
     const notifications = event.participants
@@ -468,6 +486,7 @@ export class EventService {
       },
       status: event.eligibility.requiresApproval ? 'pending_approval' : 'approved',
       joinedAt: new Date(),
+      participantCount: 1,
       hasPendingDues: false,
       duesCleared: false,
     };
@@ -519,6 +538,12 @@ export class EventService {
       // Invalidate caches
       await this.invalidateEventCaches(eventId, event.location.city);
       await redisClient.del(CacheKeys.USER(userId));
+
+      // Update cache with fresh data
+      const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+      if (freshEvent) {
+        await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+      }
 
       // Send notification to admin
       if (event.eligibility.requiresApproval) {
@@ -635,6 +660,12 @@ export class EventService {
       await this.invalidateEventCaches(eventId, event.location.city);
       await redisClient.del(CacheKeys.USER(userId));
 
+      // Update cache with fresh data
+      const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+      if (freshEvent) {
+        await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+      }
+
       // Notify user
       const notification = await notificationRepository.create({
         userId,
@@ -700,6 +731,13 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
+    // Invalidate and update cache
+    await redisClient.del(CacheKeys.EVENT(eventId));
+    const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+    if (freshEvent) {
+      await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+    }
+
     // Notify user
     const notification = await notificationRepository.create({
       userId,
@@ -753,6 +791,13 @@ export class EventService {
 
     if (!updatedEvent) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
+    }
+
+    // Invalidate and update cache
+    await redisClient.del(CacheKeys.EVENT(eventId));
+    const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+    if (freshEvent) {
+      await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
     }
 
     // Notify admin
@@ -850,6 +895,12 @@ export class EventService {
       await this.invalidateEventCaches(eventId, event.location.city);
       await redisClient.del(CacheKeys.USER(userId));
 
+      // Update cache with fresh data
+      const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+      if (freshEvent) {
+        await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+      }
+
       // Notify user
       const notification = await notificationRepository.create({
         userId,
@@ -901,6 +952,13 @@ export class EventService {
     );
     if (!updatedEvent) {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
+    }
+
+    // Invalidate and update cache
+    await redisClient.del(CacheKeys.EVENT(eventId));
+    const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+    if (freshEvent) {
+      await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
     }
 
     // Notify user
@@ -1026,6 +1084,12 @@ export class EventService {
         // Invalidate caches
         await this.invalidateEventCaches(eventId, event.location.city);
         await redisClient.del(CacheKeys.USER(event.admin.userId.toString()));
+
+        // Update cache with fresh data
+        const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+        if (freshEvent) {
+          await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+        }
 
         // Notify participants
         const notifications = event.participants
