@@ -78,8 +78,8 @@ export class PushNotificationService {
       android: {
         priority: 'high' as const,
         notification: {
-          sound: 'default',
-          channelId: 'default',
+          sound:  "boomghoomNotification.wav",
+          channelId:  "boomghoom-default",
         },
       },
       apns: {
