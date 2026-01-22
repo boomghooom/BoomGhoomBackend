@@ -4,7 +4,8 @@ import {
   notificationRepository,
   ratingRepository,
   reportRepository,
-} from '../../infrastructure/database/repositories/SocialRepository.js';
+  blockRepository,
+} from '../../infrastructure/database/repositories/index.js';
 import { userRepository } from '../../infrastructure/database/repositories/UserRepository.js';
 import { eventRepository } from '../../infrastructure/database/repositories/EventRepository.js';
 import { redisClient } from '../../config/redis.js';
@@ -27,7 +28,7 @@ import {
   ConflictError,
   ForbiddenError,
 } from '../../shared/errors/AppError.js';
-import { CacheKeys, FriendRequestStatus } from '../../shared/constants/index.js';
+import { CacheKeys } from '../../shared/constants/index.js';
 import { logger } from '../../shared/utils/logger.js';
 
 export class SocialService {
@@ -43,6 +44,12 @@ export class SocialService {
       throw new BadRequestError('Cannot send friend request to yourself');
     }
 
+    // Check if either user has blocked the other (NEW)
+    const isBlocked = await blockRepository.isBlocked(fromUserIdStr, toUserIdStr);
+    if (isBlocked) {
+      throw new ForbiddenError('Cannot send friend request', 'BLOCKED');
+    }
+
     // Check if both users exist (using normalized string IDs)
     const [fromUser, toUser] = await Promise.all([
       userRepository.findById(fromUserIdStr),
@@ -53,7 +60,7 @@ export class SocialService {
       throw new NotFoundError('User not found', 'USER_NOT_FOUND');
     }
 
-    // Check if they were in the same event (optional validation)
+    // Check if they were in the same event (optional validation - now optional)
     if (data.eventId) {
       const event = await eventRepository.findById(data.eventId);
       if (!event) {
@@ -470,6 +477,163 @@ export class SocialService {
     const count = await friendshipRepository.getFriendsCount(userId);
     await userRepository.updateStats(userId, { friendsCount: count });
     await redisClient.del(CacheKeys.USER(userId));
+  }
+
+  // Get Blocked Users List
+  async getBlockedUsers(
+    userId: string,
+    options: IPaginationOptions
+  ): Promise<IPaginatedResult<IFriendSummary>> {
+    const result = await friendshipRepository.getBlockedUsers(userId, options);
+
+    // Transform to FriendSummary format with blocked user details
+    const blockedUsers: IFriendSummary[] = [];
+    for (const friendship of result.data) {
+      // Determine which user is blocked
+      const blockedUserId =
+        friendship.user1Id.toString() === userId
+          ? friendship.user2Id.toString()
+          : friendship.user1Id.toString();
+
+      const blockedUser = await userRepository.findById(blockedUserId);
+      if (blockedUser) {
+        blockedUsers.push({
+          _id: blockedUserId,
+          friendshipId: friendship._id,
+          user: {
+            _id: blockedUser._id,
+            fullName: blockedUser.fullName,
+            displayName: blockedUser.displayName,
+            avatarUrl: blockedUser.avatarUrl,
+            gender: blockedUser.gender,
+            isOnline: blockedUser.isOnline,
+            kycVerified: blockedUser.kyc.status === 'approved',
+            averageRating: blockedUser.stats.averageRating,
+          },
+          mutualFriendsCount: 0,
+          mutualEventsCount: 0,
+          friendsSince: friendship.blockedAt || friendship.createdAt,
+        });
+      }
+    }
+
+    return {
+      data: blockedUsers,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+      hasPrevPage: result.hasPrevPage,
+    };
+  }
+
+  async isUserBlocked(userId: string, targetUserId: string): Promise<boolean> {
+    return friendshipRepository.isUserBlocked(userId, targetUserId);
+  }
+
+  // NEW: Direct user blocking methods (using BlockRepository)
+  async blockUserByUserId(blockerId: string, blockedUserId: string): Promise<void> {
+    // Validate users exist
+    const [blocker, blockedUser] = await Promise.all([
+      userRepository.findById(blockerId),
+      userRepository.findById(blockedUserId),
+    ]);
+
+    if (!blocker || !blockedUser) {
+      throw new NotFoundError('User not found', 'USER_NOT_FOUND');
+    }
+
+    if (blockerId === blockedUserId) {
+      throw new BadRequestError('Cannot block yourself', 'CANNOT_BLOCK_SELF');
+    }
+
+    // Create block relationship
+    await blockRepository.blockUser(blockerId, blockedUserId);
+
+    // Remove existing friendship if any
+    const friendship = await friendshipRepository.findFriendship(blockerId, blockedUserId);
+    if (friendship) {
+      if (friendship.status === 'accepted') {
+        // Update friend counts
+        await Promise.all([
+          this.updateFriendCount(blockerId),
+          this.updateFriendCount(blockedUserId),
+        ]);
+      }
+      // Delete the friendship
+      await friendshipRepository.deleteById(friendship._id);
+    }
+
+    // Invalidate caches
+    await Promise.all([
+      redisClient.del(CacheKeys.USER(blockerId)),
+      redisClient.del(CacheKeys.USER(blockedUserId)),
+    ]);
+
+    logger.info('User blocked', { blockerId, blockedUserId });
+  }
+
+  async unblockUser(blockerId: string, blockedUserId: string): Promise<void> {
+    const unblocked = await blockRepository.unblockUser(blockerId, blockedUserId);
+    
+    if (!unblocked) {
+      throw new NotFoundError('Block relationship not found', 'NOT_BLOCKED');
+    }
+
+    // Invalidate caches
+    await Promise.all([
+      redisClient.del(CacheKeys.USER(blockerId)),
+      redisClient.del(CacheKeys.USER(blockedUserId)),
+    ]);
+
+    logger.info('User unblocked', { blockerId, blockedUserId });
+  }
+
+  async isUserBlockedBidirectional(userId1: string, userId2: string): Promise<boolean> {
+    return blockRepository.isBlocked(userId1, userId2);
+  }
+
+  async getBlockedUsersList(
+    userId: string,
+    options: IPaginationOptions
+  ): Promise<IPaginatedResult<IFriendSummary>> {
+    const result = await blockRepository.getBlockedUsers(userId, options);
+
+    // Transform to FriendSummary format
+    const blockedUsers: IFriendSummary[] = [];
+    for (const block of result.data) {
+      const blockedUser = await userRepository.findById(block.blockedUserId);
+      if (blockedUser) {
+        blockedUsers.push({
+          _id: block.blockedUserId,
+          friendshipId: block._id, // Using block ID for unblock operation
+          user: {
+            _id: blockedUser._id,
+            fullName: blockedUser.fullName,
+            displayName: blockedUser.displayName,
+            avatarUrl: blockedUser.avatarUrl,
+            gender: blockedUser.gender,
+            isOnline: blockedUser.isOnline,
+            kycVerified: blockedUser.kyc.status === 'approved',
+            averageRating: blockedUser.stats.averageRating,
+          },
+          mutualFriendsCount: 0,
+          mutualEventsCount: 0,
+          friendsSince: block.createdAt,
+        });
+      }
+    }
+
+    return {
+      data: blockedUsers,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+      hasPrevPage: result.hasPrevPage,
+    };
   }
 }
 

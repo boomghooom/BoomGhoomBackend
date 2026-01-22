@@ -16,3 +16,9 @@ export * from './SocialRepository.js';
 // Chat repositories
 export * from './ChatRepository.js';
 
+// Block repository
+export * from './BlockRepository.js';
+
+// Post repository
+export * from './PostRepository.js';
+

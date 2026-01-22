@@ -411,6 +411,24 @@ export class EventController {
     }
   }
 
+  async kickoutParticipant(
+    req: Request<{ id: string; userId: string }, unknown, RejectJoinInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const event = await eventService.kickoutParticipant(
+        req.params.id,
+        req.userId!,
+        req.params.userId,
+        req.body.reason
+      );
+      sendSuccess(res, event, { message: 'Participant removed from event' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getPreviousParticipants(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const participants = await eventService.getAdminPreviousParticipants(req.userId!);

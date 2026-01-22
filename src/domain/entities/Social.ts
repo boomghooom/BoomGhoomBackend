@@ -142,4 +142,3 @@ export interface IBulkInviteDTO {
   recipientIds: string[];
   message?: string;
 }
-

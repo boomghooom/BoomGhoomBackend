@@ -78,5 +78,26 @@ router.get(
 // Reports
 router.post('/reports', socialController.createReport.bind(socialController));
 
-export default router;
+// Blocked Users - Get list and check
+router.get(
+  '/blocked-users',
+  validate(paginationSchema, 'query'),
+  socialController.getBlockedUsers.bind(socialController)
+);
 
+router.get(
+  '/block/check/:id',
+  validate(idParamSchema, 'params'),
+  socialController.checkIfBlocked.bind(socialController)
+);
+
+// NEW: Direct user blocking (by user ID)
+router.post('/block', socialController.blockUserByUserId.bind(socialController));
+
+router.delete(
+  '/block/:id',
+  validate(idParamSchema, 'params'),
+  socialController.unblockUser.bind(socialController)
+);
+
+export default router;

@@ -345,6 +345,18 @@ export class EventRepository
     return event ? (event.toObject() as IEvent) : null;
   }
 
+  async decrementParticipantCount(
+    eventId: string,
+    session?: ClientSession
+  ): Promise<IEvent | null> {
+    const event = await this.model.findByIdAndUpdate(
+      eventId,
+      { $inc: { participantCount: -1 } },
+      { new: true, session }
+    );
+    return event ? (event.toObject() as IEvent) : null;
+  }
+
   async getAdminPreviousParticipants(adminId: string): Promise<string[]> {
     const events = await this.model.find(
       { 'admin.userId': adminId, status: 'completed' },

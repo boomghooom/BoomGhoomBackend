@@ -568,8 +568,8 @@ export class AuthService {
       userAndroidVersion: user.userAndroidVersion,
       /// letest uploded version of the app for ios and android . it will be fetched from the database in future when
       //  we will have a versioning system for the app. for now we are using hardcoded version
-      currentIosVersion: '1.0.0',
-      currentAndroidVersion: '1.0.0',
+      currentIosVersion: '1.1.0',
+      currentAndroidVersion: '1.1.0',
     };
   }
 
