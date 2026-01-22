@@ -39,6 +39,7 @@ export const createEventSchema = z.object({
   endTime: z.coerce.date(),
   imageUrls: z.array(z.string().url()).max(10).optional(),
   coverImageUrl: z.string().url().optional(),
+  thumbnail: z.string().url().optional(),
   eligibility: z.object({
     genderAllowed: z.array(z.enum(Genders)).default(['male', 'female', 'other', 'prefer_not_to_say']),
     minAge: z.number().int().min(13).max(100).default(18),
@@ -98,6 +99,7 @@ export const updateEventSchema = z.object({
   endTime: z.coerce.date().optional(),
   imageUrls: z.array(z.string().url()).max(10).optional(),
   coverImageUrl: z.string().url().optional(),
+  thumbnail: z.string().url().optional(),
   eligibility: z
     .object({
       genderAllowed: z.array(z.enum(Genders)).optional(),
