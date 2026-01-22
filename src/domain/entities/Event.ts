@@ -86,7 +86,7 @@ export interface IEvent {
   endTime: Date;
   imageUrls: string[];
   coverImageUrl?: string;
-  thumbnail?: string;
+  thumbnailUrl?: string;
   admin: {
     userId: string;
     user: IUserSummary;
@@ -132,7 +132,7 @@ export interface IEventSummary {
   };
   startTime: Date;
   coverImageUrl?: string;
-  thumbnail?: string;
+  thumbnailUrl?: string;
   pricing: {
     isFree: boolean;
     price?: number;
@@ -153,7 +153,7 @@ export interface ICreateEventDTO {
   endTime: Date;
   imageUrls?: string[];
   coverImageUrl?: string;
-  thumbnail?: string;
+  thumbnailUrl?: string;
   adminId: string;
   eligibility: IEventEligibility;
   pricing: IEventPricing;
@@ -170,7 +170,7 @@ export interface ICreateEventWithPublishDTO {
   endTime: Date;
   imageUrls?: string[];
   coverImageUrl?: string;
-  thumbnail?: string;
+  thumbnailUrl?: string;
   adminId: string;
   eligibility: IEventEligibility;
   pricing: IEventPricing;
@@ -186,7 +186,7 @@ export interface IUpdateEventDTO {
   endTime?: Date;
   imageUrls?: string[];
   coverImageUrl?: string;
-  thumbnail?: string;
+  thumbnailUrl?: string;
   eligibility?: Partial<IEventEligibility>;
   pricing?: IEventPricing;
   rules?: string[];

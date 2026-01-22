@@ -394,7 +394,7 @@ const EventSchema = new Schema<IEventDocument, IEventModel>(
       default: [],
     },
     coverImageUrl: String,
-    thumbnail: String,
+    thumbnailUrl: String,
     admin: {
       type: EventAdminSchema,
       required: function (): boolean {
