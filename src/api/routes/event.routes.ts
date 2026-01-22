@@ -126,6 +126,13 @@ router.post(
   eventController.rejectLeave.bind(eventController)
 );
 
+// Kickout participant
+router.post(
+  '/:id/kickout/:userId',
+  validate(rejectJoinSchema),
+  eventController.kickoutParticipant.bind(eventController)
+);
+
 // Invites
 router.post(
   '/:id/bulk-invite',

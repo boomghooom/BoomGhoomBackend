@@ -156,6 +156,33 @@ export class FriendshipRepository extends BaseRepository<
       status: 'accepted',
     });
   }
+
+  async getBlockedUsers(
+    userId: string,
+    options: IPaginationOptions
+  ): Promise<IPaginatedResult<IFriendship>> {
+    const id = new Types.ObjectId(userId);
+    return this.findPaginated(
+      {
+        status: 'blocked',
+        blockedBy: id,
+      },
+      {
+        ...options,
+        sort: { blockedAt: -1 },
+      }
+    );
+  }
+
+  async isUserBlocked(blockerId: string, blockedUserId: string): Promise<boolean> {
+    const friendship = await this.findFriendship(blockerId, blockedUserId);
+    if (!friendship) return false;
+    
+    return (
+      friendship.status === 'blocked' &&
+      friendship.blockedBy?.toString() === blockerId
+    );
+  }
 }
 
 // Notification Repository

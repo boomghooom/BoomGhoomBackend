@@ -4,12 +4,16 @@ import { redisClient } from '../../config/redis.js';
 import { config } from '../../config/index.js';
 import { TooManyRequestsError } from '../../shared/errors/AppError.js';
 
-// General rate limiter
+// General rate limiter (per-user based on userId or IP)
 export const generalLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.maxRequests,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use userId if authenticated, otherwise use IP
+    return (req as any).userId || req.ip || 'unknown';
+  },
   handler: (_req, _res, next) => {
     next(new TooManyRequestsError('Too many requests, please try again later'));
   },

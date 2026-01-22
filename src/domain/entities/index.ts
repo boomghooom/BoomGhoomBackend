@@ -13,3 +13,6 @@ export * from './Chat.js';
 // Social entities
 export * from './Social.js';
 
+// Post entities
+export * from './Post.js';
+

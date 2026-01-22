@@ -238,6 +238,69 @@ export class SocialController {
       next(error);
     }
   }
+
+  // Blocked Users List
+  async getBlockedUsers(
+    req: Request<unknown, unknown, unknown, PaginationInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { page, limit } = req.query;
+      const result = await socialService.getBlockedUsersList(req.userId!, { page, limit });
+      sendPaginated(res, result.data, {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages,
+        hasNextPage: result.hasNextPage,
+        hasPrevPage: result.hasPrevPage,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async checkIfBlocked(
+    req: Request<IdParamInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const isBlocked = await socialService.isUserBlockedBidirectional(req.userId!, req.params.id);
+      sendSuccess(res, { isBlocked });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // NEW: Direct user blocking methods
+  async blockUserByUserId(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { userId } = req.body as { userId: string };
+      await socialService.blockUserByUserId(req.userId!, userId);
+      sendSuccess(res, null, { message: 'User blocked successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unblockUser(
+    req: Request<IdParamInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await socialService.unblockUser(req.userId!, req.params.id);
+      sendSuccess(res, null, { message: 'User unblocked successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const socialController = new SocialController();

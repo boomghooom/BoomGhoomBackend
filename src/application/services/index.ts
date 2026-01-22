@@ -30,3 +30,12 @@ export * from './UploadService.js';
 
 // Push notification service
 export * from './PushNotificationService.js';
+
+// Post service
+export * from './PostService.js';
+
+// Feed service
+export * from './FeedService.js';
+
+// Recommendation service
+export * from './RecommendationService.js';

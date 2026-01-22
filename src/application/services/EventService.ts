@@ -846,12 +846,17 @@ export class EventService {
     session.startTransaction();
 
     try {
-      // Update participant status
-      const updatedEvent = await eventRepository.updateParticipantStatus(
+      // Update participant status and decrement participant count
+      await eventRepository.updateParticipantStatus(
         eventId,
         userId,
-        'left'
+        'left',
+        undefined,
+        session
       );
+
+      // Decrement participant count
+      const updatedEvent = await eventRepository.decrementParticipantCount(eventId, session);
 
       if (!updatedEvent) {
         throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
@@ -915,6 +920,125 @@ export class EventService {
       });
 
       logWithContext.event('Leave request approved', { eventId, userId, adminId });
+
+      return updatedEvent;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async kickoutParticipant(
+    eventId: string,
+    adminId: string,
+    userId: string,
+    reason?: string
+  ): Promise<IEvent> {
+    const event = await eventRepository.findById(eventId);
+    if (!event) {
+      throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
+    }
+
+    if (event.admin.userId.toString() !== adminId.toString()) {
+      throw new ForbiddenError('Not authorized', 'NOT_AUTHORIZED');
+    }
+
+    // Check if user is admin trying to kick themselves
+    if (userId === adminId) {
+      throw new BadRequestError('Admin cannot kick themselves', 'CANNOT_KICK_ADMIN');
+    }
+
+    const participant = await eventRepository.getParticipant(eventId, userId);
+    if (!participant) {
+      throw new NotFoundError('Participant not found', 'NOT_FOUND');
+    }
+
+    if (participant.status !== 'approved') {
+      throw new BadRequestError('Can only kick approved participants', 'INVALID_STATUS');
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Update participant status to removed
+      await eventRepository.updateParticipantStatus(
+        eventId,
+        userId,
+        'removed',
+        { rejectionReason: reason },
+        session
+      );
+
+      // Decrement participant count
+      const updatedEvent = await eventRepository.decrementParticipantCount(eventId, session);
+
+      if (!updatedEvent) {
+        throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
+      }
+
+      // Clear dues if any
+      const due = await dueRepository.findByUserAndEvent(userId, eventId);
+      if (due && due.status === 'pending') {
+        await dueRepository.clearDue(due._id, 'commission', undefined, session);
+        
+        const user = await userRepository.findById(userId);
+        if (user) {
+          await userRepository.updateFinance(
+            userId,
+            { dues: Math.max(0, user.finance.dues - due.amount) },
+            session
+          );
+        }
+
+        // Update event dues stats
+        await eventRepository.updateDuesStats(eventId, 0, -due.amount, session);
+      }
+
+      // Remove from chat
+      const chat = await chatRepository.findEventChat(eventId);
+      if (chat) {
+        await chatRepository.removeParticipant(chat._id, userId);
+      }
+
+      // Update user stats
+      const user = await userRepository.findById(userId);
+      if (user) {
+        await userRepository.updateStats(userId, {
+          eventsJoined: Math.max(0, (user.stats.eventsJoined || 1) - 1),
+        });
+      }
+
+      await session.commitTransaction();
+
+      // Invalidate caches
+      await this.invalidateEventCaches(eventId, event.location.city);
+      await redisClient.del(CacheKeys.USER(userId));
+
+      // Update cache with fresh data
+      const freshEvent = await eventRepository.findByIdWithPopulate(eventId);
+      if (freshEvent) {
+        await redisClient.set(CacheKeys.EVENT(eventId), freshEvent, CacheTTL.MEDIUM);
+      }
+
+      // Notify user
+      const notification = await notificationRepository.create({
+        userId,
+        type: 'event_update',
+        title: 'Removed from Event',
+        body: reason
+          ? `You have been removed from ${event.title}: ${reason}`
+          : `You have been removed from ${event.title}`,
+        data: { eventId },
+      });
+      // Send push notification
+      await pushNotificationService.sendNotification(notification).catch((error) => {
+        logger.error('Failed to send push notification for kickout:', error);
+      });
+
+      logWithContext.event('Participant kicked out', { eventId, userId, adminId, reason });
 
       return updatedEvent;
     } catch (error) {

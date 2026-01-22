@@ -28,3 +28,11 @@ export * from './Payout.model.js';
 // Pass model
 export * from './Pass.model.js';
 
+// Block model
+export * from './Block.model.js';
+
+// Post models
+export * from './Post.model.js';
+export * from './PostLike.model.js';
+export * from './PostComment.model.js';
+

@@ -8,6 +8,8 @@ import chatRoutes from './chat.routes.js';
 import bookingRoutes from './booking.routes.js';
 import passRoutes from './pass.routes.js';
 import uploadRoutes from './upload.routes.js';
+import postRoutes from './post.routes.js';
+import feedRoutes from './feed.routes.js';
 
 const router = Router();
 
@@ -30,6 +32,8 @@ router.use('/chats', chatRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/passes', passRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/posts', postRoutes);
+router.use('/feed', feedRoutes);
 
 export default router;
 
