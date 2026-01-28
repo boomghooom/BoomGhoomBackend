@@ -93,6 +93,44 @@ export const updatePhoneSchema = z.object({
     .transform((val) => val.trim()),
 });
 
+// Forgot Password - Send OTP
+export const forgotPasswordSendOTPSchema = z.object({
+  phoneNumber: z
+    .string()
+    .regex(phoneRegex, 'Invalid Indian phone number')
+    .transform((val) => val.trim()),
+});
+
+// Forgot Password - Verify OTP
+export const forgotPasswordVerifyOTPSchema = z.object({
+  phoneNumber: z
+    .string()
+    .regex(phoneRegex, 'Invalid Indian phone number')
+    .transform((val) => val.trim()),
+  otp: z
+    .string()
+    .min(4, 'OTP must be at least 4 digits')
+    .max(8, 'OTP must be less than 8 digits')
+    .regex(/^\d+$/, 'OTP must contain only digits'),
+});
+
+// Forgot Password - Reset Password
+export const resetPasswordSchema = z.object({
+  phoneNumber: z
+    .string()
+    .regex(phoneRegex, 'Invalid Indian phone number')
+    .transform((val) => val.trim()),
+  otp: z
+    .string()
+    .min(4, 'OTP must be at least 4 digits')
+    .max(8, 'OTP must be less than 8 digits')
+    .regex(/^\d+$/, 'OTP must contain only digits'),
+  newPassword: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(50, 'Password must be less than 50 characters'),
+});
+
 export type SendSignupOTPInput = z.infer<typeof sendSignupOTPSchema>;
 export type VerifySignupOTPInput = z.infer<typeof verifySignupOTPSchema>;
 export type ResendOTPInput = z.infer<typeof resendOTPSchema>;
@@ -102,4 +140,7 @@ export type AppleAuthInput = z.infer<typeof appleAuthSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type UpdatePhoneInput = z.infer<typeof updatePhoneSchema>;
+export type ForgotPasswordSendOTPInput = z.infer<typeof forgotPasswordSendOTPSchema>;
+export type ForgotPasswordVerifyOTPInput = z.infer<typeof forgotPasswordVerifyOTPSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 

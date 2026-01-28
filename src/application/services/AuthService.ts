@@ -4,6 +4,7 @@ import { config } from '../../config/index.js';
 import { userRepository } from '../../infrastructure/database/repositories/UserRepository.js';
 import { UserModel } from '../../infrastructure/database/models/User.model.js';
 import { redisClient } from '../../config/redis.js';
+import { otpService } from './OTPService.js';
 import { IUser, ICreateUserDTO } from '../../domain/entities/User.js';
 import {
   UnauthorizedError,
@@ -86,9 +87,26 @@ export class AuthService {
     const softDeletedUser = await UserModel.findOne({
       $or: [
         { phoneNumber: data.phoneNumber, isDeleted: true },
-        { email: data.email.toLowerCase().trim(), isDeleted: true },
+        { email: data.email?.toLowerCase().trim(), isDeleted: true },
       ],
     });
+
+    // If soft-deleted user exists, check if within 30 days
+    if (softDeletedUser && softDeletedUser.deletedAt) {
+      const daysSinceDeletion = Math.floor(
+        (Date.now() - new Date(softDeletedUser.deletedAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysSinceDeletion <= 30) {
+        // Within 30 days - can restore
+        throw new ConflictError(
+          `Account was deleted ${daysSinceDeletion} days ago. Please contact support to restore your account.`,
+          'ACCOUNT_DELETED_RESTORABLE'
+        );
+      }
+      // More than 30 days - data will be transferred by cron (not implemented yet)
+      // For now, we'll allow creating new account
+    }
 
     // Validate referral code if provided
     let referredBy: string | undefined;
@@ -99,110 +117,31 @@ export class AuthService {
       }
     }
 
+    // Create new user
+    const createData: ICreateUserDTO = {
+      phoneNumber: data.phoneNumber,
+      fullName: data.fullName,
+      password: data.password,
+      email: data.email,
+      authProvider: 'phone',
+      referredBy,
+      ...(data.gender && { gender: data.gender }),
+      ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
+    };
+
     let user: IUser;
-
-    if (softDeletedUser) {
-      // Restore and update the soft-deleted user
-      const updateData: Record<string, unknown> = {
-        fullName: data.fullName,
-        password: data.password,
-        email: data.email,
-        authProvider: 'phone' as const,
-        referredBy,
-        isDeleted: false,
-        deletedAt: undefined,
-        ...(data.gender && { gender: data.gender }),
-        ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
-      };
-
-      // Restore the user by updating it
-      const restoredUser = await UserModel.findByIdAndUpdate(
-        softDeletedUser._id,
-        { $set: updateData },
-        { new: true, runValidators: true }
-      );
-
-      if (!restoredUser) {
-        throw new ConflictError('Failed to restore account', 'RESTORE_FAILED');
-      }
-
-      // Get the restored user through repository to ensure proper type conversion
-      const restored = await userRepository.findById(restoredUser._id.toString());
-      if (!restored) {
-        throw new ConflictError('Failed to restore account', 'RESTORE_FAILED');
-      }
-      user = restored;
-      logWithContext.auth('User account restored', {
-        userId: user._id,
-        phoneNumber: data.phoneNumber,
-      });
-    } else {
-      // Create new user
-      const createData: ICreateUserDTO = {
-        phoneNumber: data.phoneNumber,
-        fullName: data.fullName,
-        password: data.password,
-        email: data.email,
-        authProvider: 'phone',
-        referredBy,
-        ...(data.gender && { gender: data.gender }),
-        ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
-      };
-
-      try {
-        user = await userRepository.create(createData);
-        logWithContext.auth('User signed up', { userId: user._id, phoneNumber: data.phoneNumber });
-      } catch (error) {
-        // Handle case where MongoDB unique constraint fails (race condition)
-        // This can happen if a user was created between our check and create
-        if (
-          (error as { code?: number; name?: string }).code === 11000 ||
-          (error as { code?: number; name?: string }).name === 'MongoServerError'
-        ) {
-          // Try to find and restore if it's a soft-deleted user
-          const raceConditionUser = await UserModel.findOne({
-            $or: [
-              { phoneNumber: data.phoneNumber },
-              { email: data.email.toLowerCase().trim() },
-            ],
-          });
-          if (raceConditionUser?.isDeleted) {
-            const updateData: Record<string, unknown> = {
-              fullName: data.fullName,
-              password: data.password,
-              email: data.email,
-              authProvider: 'phone' as const,
-              referredBy,
-              isDeleted: false,
-              deletedAt: undefined,
-              ...(data.gender && { gender: data.gender }),
-              ...(data.fcmToken && { fcmTokens: [data.fcmToken] }),
-            };
-            const restoredUser = await UserModel.findByIdAndUpdate(
-              raceConditionUser._id,
-              { $set: updateData },
-              { new: true, runValidators: true }
-            );
-            if (restoredUser) {
-              // Get the restored user through repository to ensure proper type conversion
-              const restored = await userRepository.findById(restoredUser._id.toString());
-              if (!restored) {
-                throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
-              }
-              user = restored;
-              logWithContext.auth('User account restored (race condition)', {
-                userId: user._id,
-                phoneNumber: data.phoneNumber,
-              });
-            } else {
-              throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
-            }
-          } else {
-            throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
-          }
-        } else {
-          throw error;
-        }
+    try {
+      user = await userRepository.create(createData);
+      logWithContext.auth('User signed up', { userId: user._id, phoneNumber: data.phoneNumber });
+    } catch (error) {
+      // Handle case where MongoDB unique constraint fails (race condition)
+      if (
+        (error as { code?: number; name?: string }).code === 11000 ||
+        (error as { code?: number; name?: string }).name === 'MongoServerError'
+      ) {
+        throw new ConflictError('User with this phone number already exists', 'USER_EXISTS');
+      } else {
+        throw error;
       }
     }
 
@@ -215,6 +154,11 @@ export class AuthService {
     const user = await userRepository.findByPhoneWithPassword(credentials.phoneNumber);
     if (!user) {
       throw new UnauthorizedError('Invalid credentials', 'INVALID_CREDENTIALS');
+    }
+
+    // Check if account is deleted
+    if (user.isDeleted) {
+      throw new UnauthorizedError('User not found', 'USER_NOT_FOUND');
     }
 
     if (user.isBlocked) {
@@ -586,7 +530,82 @@ export class AuthService {
       logger.error('Error blacklisting token:', error);
     }
   }
+
+  // ============================================
+  // Forgot Password Flow
+  // ============================================
+
+  async sendForgotPasswordOTP(phoneNumber: string): Promise<void> {
+    // Check if user exists and is not deleted
+    const user = await userRepository.findByPhone(phoneNumber);
+    if (!user) {
+      throw new NotFoundError('User not found', 'USER_NOT_FOUND');
+    }
+
+    // Check if user has password (not social auth)
+    if (!user.password) {
+      throw new BadRequestError(
+        'Cannot reset password for social auth accounts',
+        'SOCIAL_AUTH_ACCOUNT'
+      );
+    }
+
+    // Generate and send OTP using OTPService
+    await otpService.sendLoginOTP(phoneNumber);
+
+    logWithContext.auth('Forgot password OTP sent', { phoneNumber });
+  }
+
+  async verifyForgotPasswordOTP(phoneNumber: string, otp: string): Promise<void> {
+    const result = await otpService.verifyOTP(phoneNumber, otp);
+    if (!result.verified) {
+      throw new BadRequestError(result.message || 'Invalid or expired OTP', 'INVALID_OTP');
+    }
+
+    logWithContext.auth('Forgot password OTP verified', { phoneNumber });
+  }
+
+  async resetPassword(phoneNumber: string, otp: string, newPassword: string): Promise<void> {
+    // Verify OTP first
+    const result = await otpService.verifyOTP(phoneNumber, otp);
+    if (!result.verified) {
+      throw new BadRequestError(result.message || 'Invalid or expired OTP', 'INVALID_OTP');
+    }
+
+    // Find user
+    const user = await userRepository.findByPhone(phoneNumber);
+    if (!user) {
+      throw new NotFoundError('User not found', 'USER_NOT_FOUND');
+    }
+
+    // Update password
+    await userRepository.updatePassword(user._id, newPassword);
+
+    // Clear OTP attempts
+    await otpService.clearOTPAttempts(phoneNumber);
+
+    logWithContext.auth('Password reset successful', { userId: user._id });
+  }
+
+  // ============================================
+  // Account Deletion
+  // ============================================
+
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found', 'USER_NOT_FOUND');
+    }
+
+    // Soft delete user
+    await userRepository.softDelete(userId);
+
+    // Clear all user caches
+    await redisClient.del(CacheKeys.USER(userId));
+    await redisClient.del(CacheKeys.USER_SESSION(userId));
+
+    logWithContext.auth('Account deleted', { userId });
+  }
 }
 
 export const authService = new AuthService();
-

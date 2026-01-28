@@ -162,7 +162,7 @@ export class EventController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const event = await eventService.getEventById(req.params.id);
+      const event = await eventService.getEventById(req.params.id, req.userId);
       sendSuccess(res, event);
     } catch (error) {
       next(error);

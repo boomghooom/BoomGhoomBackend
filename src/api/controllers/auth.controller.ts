@@ -14,6 +14,9 @@ import {
   RefreshTokenInput,
   ChangePasswordInput,
   UpdatePhoneInput,
+  ForgotPasswordSendOTPInput,
+  ForgotPasswordVerifyOTPInput,
+  ResetPasswordInput,
 } from '../validators/auth.validator.js';
 
 export class AuthController {
@@ -185,6 +188,62 @@ export class AuthController {
     try {
       const user = await authService.updatePhoneNumber(req.userId!, req.body.newPhoneNumber);
       sendSuccess(res, user, { message: 'Phone number updated' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ============================================
+  // Forgot Password
+  // ============================================
+
+  async sendForgotPasswordOTP(
+    req: Request<unknown, unknown, ForgotPasswordSendOTPInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await authService.sendForgotPasswordOTP(req.body.phoneNumber);
+      sendSuccess(res, null, { message: 'OTP sent successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async verifyForgotPasswordOTP(
+    req: Request<unknown, unknown, ForgotPasswordVerifyOTPInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await authService.verifyForgotPasswordOTP(req.body.phoneNumber, req.body.otp);
+      sendSuccess(res, null, { message: 'OTP verified successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resetPassword(
+    req: Request<unknown, unknown, ResetPasswordInput>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      await authService.resetPassword(req.body.phoneNumber, req.body.otp, req.body.newPassword);
+      sendSuccess(res, null, { message: 'Password reset successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ============================================
+  // Account Deletion
+  // ============================================
+
+  async deleteAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await authService.deleteAccount(req.userId!);
+      sendSuccess(res, null, { message: 'Account deleted successfully' });
     } catch (error) {
       next(error);
     }

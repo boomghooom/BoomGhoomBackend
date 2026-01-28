@@ -34,7 +34,7 @@ router.get(
 
 router.get(
   '/:id',
-  optionalAuth,
+  authenticate,
   validate(idParamSchema, 'params'),
   eventController.getById.bind(eventController)
 );

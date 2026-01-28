@@ -27,7 +27,7 @@ export class UserController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const profile = await userService.getPublicProfile(req.params.id);
+      const profile = await userService.getPublicProfile(req.params.id, req.userId);
       sendSuccess(res, profile);
     } catch (error) {
       next(error);

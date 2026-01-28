@@ -1,5 +1,13 @@
 import { Gender, KYCStatus } from '../../shared/constants/index.js';
 
+export type RelationshipStatus = 
+  | 'self'                    // Khud ka account
+  | 'friend'                  // Already friends
+  | 'blocked'                 // Blocked by either user
+  | 'request_sent'            // Friend request sent by viewing user
+  | 'request_received'        // Friend request received from this user
+  | 'none';                   // No relationship
+
 export interface IUserLocation {
   type: 'Point';
   /**
@@ -93,6 +101,7 @@ export interface IUserSummary {
   isOnline: boolean;
   kycVerified: boolean;
   averageRating: number;
+  relationshipStatus?: RelationshipStatus;
 }
 
 export interface ICreateUserDTO {

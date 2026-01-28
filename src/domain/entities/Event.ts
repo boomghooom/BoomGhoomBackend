@@ -58,6 +58,14 @@ export interface IEventGenderRatio {
   other: number;
 }
 
+export type RelationshipStatus = 
+  | 'self'                    // Khud ka account
+  | 'friend'                  // Already friends
+  | 'blocked'                 // Blocked by either user
+  | 'request_sent'            // Friend request sent by viewing user
+  | 'request_received'        // Friend request received from this user
+  | 'none';                   // No relationship
+
 export interface IEventParticipant {
   userId: string;
   user: IUserSummary;
@@ -72,6 +80,7 @@ export interface IEventParticipant {
   hasPendingDues: boolean;
   duesCleared: boolean;
   duesClearedAt?: Date;
+  relationshipStatus?: RelationshipStatus;
 }
 
 export interface IEvent {

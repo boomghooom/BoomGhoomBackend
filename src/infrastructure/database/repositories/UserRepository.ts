@@ -261,6 +261,15 @@ export class UserRepository
     if (!user) return false;
     return user.comparePassword(password);
   }
+
+  async updatePassword(id: string, newPassword: string): Promise<void> {
+    const user = await this.model.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.password = newPassword;
+    await user.save(); // This will trigger the pre-save hook to hash the password
+  }
 }
 
 export const userRepository = new UserRepository();

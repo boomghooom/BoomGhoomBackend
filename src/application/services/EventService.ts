@@ -179,8 +179,9 @@ export class EventService {
     return updatedEvent;
   }
 
-  async getEventById(eventId: string): Promise<IEvent> {
+  async getEventById(eventId: string, requestingUserId?: string): Promise<IEvent> {
     // Try cache first
+   
     const cached = await redisClient.get<IEvent>(CacheKeys.EVENT(eventId));
     if (cached) {
       return cached;
@@ -191,7 +192,64 @@ export class EventService {
       throw new NotFoundError('Event not found', 'EVENT_NOT_FOUND');
     }
 
+    // If requesting user is provided, add relationship status to each participant
+    if (requestingUserId && event.participants) {
+      const { friendshipRepository, blockRepository } = await import('../../infrastructure/database/repositories/index.js');
+      
+      // Add relationship status to each participant
+      for (const participant of event.participants) {
+        // Extract participant user ID - handle both populated and non-populated cases
+        let participantUserId: string;
+        
+        if (typeof participant.userId === 'string') {
+          // Already a string ID
+          participantUserId = participant.userId;
+        } else if (participant.userId && typeof participant.userId === 'object') {
+          // Populated user object - extract _id
+          participantUserId = (participant.userId as any)._id?.toString() || (participant.userId as any).id?.toString();
+        } else {
+          // Fallback - try toString
+          participantUserId = String(participant.userId);
+        }
+        
+        // Skip if we couldn't extract a valid ID
+        if (!participantUserId) {
+          logger.warn('Could not extract participant userId', { participant });
+          continue;
+        }
+        
+        // Check if it's the user themselves
+        if (participantUserId === requestingUserId) {
+          (participant as any).relationshipStatus = 'self';
+          continue;
+        }
 
+        // Check block status first (highest priority)
+        const isBlocked = await blockRepository.isBlocked(requestingUserId, participantUserId);
+        if (isBlocked) {
+          (participant as any).relationshipStatus = 'blocked';
+          continue;
+        }
+
+        // Check friendship status
+        const friendship = await friendshipRepository.findFriendship(requestingUserId, participantUserId);
+        
+        if (friendship?.status === 'accepted') {
+          (participant as any).relationshipStatus = 'friend';
+        } else if (friendship?.status === 'pending') {
+          // Check who sent the request
+          if (friendship.requestedBy.toString() === requestingUserId) {
+            (participant as any).relationshipStatus = 'request_sent';
+          } else {
+            (participant as any).relationshipStatus = 'request_received';
+          }
+        } else {
+          // No relationship
+          (participant as any).relationshipStatus = 'none';
+        }
+      }
+    }
+    
 
     // Cache event
     await redisClient.set(CacheKeys.EVENT(eventId), event, CacheTTL.MEDIUM);

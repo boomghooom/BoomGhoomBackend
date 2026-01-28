@@ -13,6 +13,9 @@ import {
   refreshTokenSchema,
   changePasswordSchema,
   updatePhoneSchema,
+  forgotPasswordSendOTPSchema,
+  forgotPasswordVerifyOTPSchema,
+  resetPasswordSchema,
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -106,6 +109,37 @@ router.patch(
   authenticate,
   validate(updatePhoneSchema),
   authController.updatePhone.bind(authController)
+);
+
+router.delete(
+  '/account',
+  authenticate,
+  authController.deleteAccount.bind(authController)
+);
+
+// ============================================
+// Forgot Password (not authenticated)
+// ============================================
+
+router.post(
+  '/forgot-password/send-otp',
+  otpLimiter,
+  validate(forgotPasswordSendOTPSchema),
+  authController.sendForgotPasswordOTP.bind(authController)
+);
+
+router.post(
+  '/forgot-password/verify-otp',
+  authLimiter,
+  validate(forgotPasswordVerifyOTPSchema),
+  authController.verifyForgotPasswordOTP.bind(authController)
+);
+
+router.post(
+  '/forgot-password/reset',
+  authLimiter,
+  validate(resetPasswordSchema),
+  authController.resetPassword.bind(authController)
 );
 
 export default router;
