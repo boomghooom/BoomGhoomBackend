@@ -109,7 +109,7 @@ export const forgotPasswordVerifyOTPSchema = z.object({
     .transform((val) => val.trim()),
   otp: z
     .string()
-    .min(4, 'OTP must be at least 4 digits')
+    .min(6, 'OTP must be at least 6 digits')
     .max(8, 'OTP must be less than 8 digits')
     .regex(/^\d+$/, 'OTP must contain only digits'),
 });
@@ -120,11 +120,6 @@ export const resetPasswordSchema = z.object({
     .string()
     .regex(phoneRegex, 'Invalid Indian phone number')
     .transform((val) => val.trim()),
-  otp: z
-    .string()
-    .min(4, 'OTP must be at least 4 digits')
-    .max(8, 'OTP must be less than 8 digits')
-    .regex(/^\d+$/, 'OTP must contain only digits'),
   newPassword: z
     .string()
     .min(6, 'Password must be at least 6 characters')

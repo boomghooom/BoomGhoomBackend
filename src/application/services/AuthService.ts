@@ -562,14 +562,20 @@ export class AuthService {
       throw new BadRequestError(result.message || 'Invalid or expired OTP', 'INVALID_OTP');
     }
 
+    // Mark as verified for reset password step
+    await otpService.markForgotPasswordVerified(phoneNumber);
+
     logWithContext.auth('Forgot password OTP verified', { phoneNumber });
   }
 
-  async resetPassword(phoneNumber: string, otp: string, newPassword: string): Promise<void> {
-    // Verify OTP first
-    const result = await otpService.verifyOTP(phoneNumber, otp);
-    if (!result.verified) {
-      throw new BadRequestError(result.message || 'Invalid or expired OTP', 'INVALID_OTP');
+  async resetPassword(phoneNumber: string, newPassword: string): Promise<void> {
+    // Check if OTP was verified in previous step
+    const isVerified = await otpService.isForgotPasswordVerified(phoneNumber);
+    if (!isVerified) {
+      throw new BadRequestError(
+        'Please verify OTP first before resetting password',
+        'OTP_NOT_VERIFIED'
+      );
     }
 
     // Find user
@@ -581,7 +587,8 @@ export class AuthService {
     // Update password
     await userRepository.updatePassword(user._id, newPassword);
 
-    // Clear OTP attempts
+    // Clear verified session and OTP attempts
+    await otpService.clearForgotPasswordVerified(phoneNumber);
     await otpService.clearOTPAttempts(phoneNumber);
 
     logWithContext.auth('Password reset successful', { userId: user._id });

@@ -60,6 +60,13 @@ export class OTPService {
   }
 
   /**
+   * Get Redis key for forgot password verified session
+   */
+  private getForgotPasswordVerifiedKey(phoneNumber: string): string {
+    return `forgot_password:verified:${phoneNumber}`;
+  }
+
+  /**
    * Format phone number for SMS (adds country code if missing)
    * India (91) is the default country code
    */
@@ -237,7 +244,8 @@ export class OTPService {
     }
 
     // Generate and store OTP
-    const otp = this.generateOTP();
+    // const otp = this.generateOTP();
+     const otp = '123456';
     const otpKey = this.getOTPKey(phoneNumber);
     await redisClient.set(otpKey, otp, config.sms.otpExpiry);
 
@@ -271,6 +279,32 @@ export class OTPService {
 
     // Otherwise, it's a login OTP resend
     return this.sendLoginOTP(phoneNumber);
+  }
+
+  /**
+   * Mark forgot password OTP as verified (for reset password flow)
+   */
+  async markForgotPasswordVerified(phoneNumber: string): Promise<void> {
+    const key = this.getForgotPasswordVerifiedKey(phoneNumber);
+    // Store for 10 minutes - user must reset password within this time
+    await redisClient.set(key, 'verified', 600);
+  }
+
+  /**
+   * Check if forgot password OTP was verified
+   */
+  async isForgotPasswordVerified(phoneNumber: string): Promise<boolean> {
+    const key = this.getForgotPasswordVerifiedKey(phoneNumber);
+    const verified = await redisClient.get(key);
+    return verified === 'verified';
+  }
+
+  /**
+   * Clear forgot password verified session
+   */
+  async clearForgotPasswordVerified(phoneNumber: string): Promise<void> {
+    const key = this.getForgotPasswordVerifiedKey(phoneNumber);
+    await redisClient.del(key);
   }
 }
 

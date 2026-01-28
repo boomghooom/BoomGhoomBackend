@@ -229,7 +229,7 @@ export class AuthController {
     next: NextFunction
   ): Promise<void> {
     try {
-      await authService.resetPassword(req.body.phoneNumber, req.body.otp, req.body.newPassword);
+      await authService.resetPassword(req.body.phoneNumber, req.body.newPassword);
       sendSuccess(res, null, { message: 'Password reset successfully' });
     } catch (error) {
       next(error);
