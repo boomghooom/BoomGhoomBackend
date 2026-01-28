@@ -178,11 +178,11 @@ export class UserService {
     logger.info('User soft deleted', { userId });
   }
 
-  async getPublicProfile(userId: string): Promise<Partial<IUser>> {
+  async getPublicProfile(userId: string, requestingUserId?: string): Promise<Partial<IUser>> {
     const user = await this.getUserById(userId);
     
-    // Return only public information
-    return {
+    // Build public profile
+    const publicProfile: Partial<IUser> = {
       _id: user._id,
       fullName: user.fullName,
       displayName: user.displayName,
@@ -206,6 +206,41 @@ export class UserService {
       lastActiveAt: user.lastActiveAt,
       createdAt: user.createdAt,
     };
+
+    // Add relationship status if requesting user is provided
+    if (requestingUserId) {
+      const { friendshipRepository, blockRepository } = await import('../../infrastructure/database/repositories/index.js');
+      
+      // Check if viewing own profile
+      if (userId === requestingUserId) {
+        (publicProfile as any).relationshipStatus = 'self';
+      } else {
+        // Check block status first
+        const isBlocked = await blockRepository.isBlocked(requestingUserId, userId);
+        if (isBlocked) {
+          (publicProfile as any).relationshipStatus = 'blocked';
+        } else {
+          // Check friendship status
+          const friendship = await friendshipRepository.findFriendship(requestingUserId, userId);
+          
+          if (friendship?.status === 'accepted') {
+            (publicProfile as any).relationshipStatus = 'friend';
+          } else if (friendship?.status === 'pending') {
+            // Check who sent the request
+            if (friendship.requestedBy.toString() === requestingUserId) {
+              (publicProfile as any).relationshipStatus = 'request_sent';
+            } else {
+              (publicProfile as any).relationshipStatus = 'request_received';
+            }
+          } else {
+            // No relationship
+            (publicProfile as any).relationshipStatus = 'none';
+          }
+        }
+      }
+    }
+    
+    return publicProfile;
   }
 
   async checkCanCreateEvent(userId: string): Promise<{ canCreate: boolean; reason?: string }> {
