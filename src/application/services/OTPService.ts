@@ -97,17 +97,15 @@ export class OTPService {
   private async sendSMS(phoneNumber: string, otp: string): Promise<boolean> {
     try {
       const formattedNumber = this.formatPhoneForSMS(phoneNumber);
-      console.log('OTP is', otp);
-      console.log('Original phone:', phoneNumber, 'Formatted phone:', formattedNumber);
+      // console.log('OTP is', otp);
+      // console.log('Original phone:', phoneNumber, 'Formatted phone:', formattedNumber);
       
       // DigiCoders SMS API
       const message = `Your OTP Code is ${otp}. Do not share it with anyone. From BoomGhoom. #TeamDigiCoders`;
       const url = `${process.env.SMS_API_URL}?authkey=${process.env.SMS_AUTH_KEY}&mobiles=${formattedNumber}&message=${encodeURIComponent(message)}&sender=${process.env.SMS_SENDER}&route=${process.env.SMS_ROUTE}&country=${process.env.SMS_COUNTRY}&DLT_TE_ID=${process.env.SMS_DLT_TE_ID}`;
       
-      console.log('SMS URL:', url);
-      
       const smsResp = await axios.get(url);
-      console.log('SMS Response is', smsResp.data);
+      // console.log('SMS Response is', smsResp.data);
       
       // DigiCoders API returns success in different format, check for common success indicators
       if (smsResp?.data && (smsResp.data.type === 'success' || smsResp.status === 200)) {
