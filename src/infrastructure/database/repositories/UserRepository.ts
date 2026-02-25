@@ -267,8 +267,10 @@ export class UserRepository
     if (!user) {
       throw new Error('User not found');
     }
+    
+    // Set password and save only password field (bypass validation for other fields)
     user.password = newPassword;
-    await user.save(); // This will trigger the pre-save hook to hash the password
+    await user.save({ validateModifiedOnly: true });
   }
 }
 

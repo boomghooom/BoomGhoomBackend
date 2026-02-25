@@ -536,8 +536,8 @@ export class AuthService {
   // ============================================
 
   async sendForgotPasswordOTP(phoneNumber: string): Promise<void> {
-    // Check if user exists and is not deleted
-    const user = await userRepository.findByPhone(phoneNumber);
+    // Check if user exists and is not deleted (need password field to check auth type)
+    const user = await userRepository.findByPhoneWithPassword(phoneNumber);
     if (!user) {
       throw new NotFoundError('User not found', 'USER_NOT_FOUND');
     }

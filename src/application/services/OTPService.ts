@@ -33,7 +33,9 @@ export class OTPService {
     const length = config.sms.otpLength;
     const min = Math.pow(10, length - 1);
     const max = Math.pow(10, length) - 1;
-    return Math.floor(min + Math.random() * (max - min + 1)).toString();
+    const otp = Math.floor(min + Math.random() * (max - min + 1)).toString();
+    console.log('Generated OTP:', otp);
+    return otp;
   }
 
   /**
@@ -95,17 +97,18 @@ export class OTPService {
   private async sendSMS(phoneNumber: string, otp: string): Promise<boolean> {
     try {
       const formattedNumber = this.formatPhoneForSMS(phoneNumber);
-      console.log('OTP is', otp);
-      console.log('Original phone:', phoneNumber, 'Formatted phone:', formattedNumber);
+      // console.log('OTP is', otp);
+      // console.log('Original phone:', phoneNumber, 'Formatted phone:', formattedNumber);
       
-      const body = `Your mobile verification OTP for Connecting Hearts is ${otp}. Please do not share it with anyone. Powered by SHUPRA`;
-      const url = `${process.env.SMS_API_URL}?api_id=${process.env.SMS_API_ID}&api_password=${process.env.SMS_API_PASSWORD}&sms_type=${process.env.SMS_TYPE}&sms_encoding=text&sender=${process.env.SMS_SENDER}&number=${formattedNumber}&message=${encodeURIComponent(body)}&template_id=${process.env.SMS_TEMPLATE_ID}`;
-      console.log('URL is', url);
+      // DigiCoders SMS API
+      const message = `Your OTP Code is ${otp}. Do not share it with anyone. From BoomGhoom. #TeamDigiCoders`;
+      const url = `${process.env.SMS_API_URL}?authkey=${process.env.SMS_AUTH_KEY}&mobiles=${formattedNumber}&message=${encodeURIComponent(message)}&sender=${process.env.SMS_SENDER}&route=${process.env.SMS_ROUTE}&country=${process.env.SMS_COUNTRY}&DLT_TE_ID=${process.env.SMS_DLT_TE_ID}`;
       
       const smsResp = await axios.get(url);
-      console.log('SMS Response is', smsResp.data);
+      // console.log('SMS Response is', smsResp.data);
       
-      if (smsResp?.data?.code === 200) {
+      // DigiCoders API returns success in different format, check for common success indicators
+      if (smsResp?.data && (smsResp.data.type === 'success' || smsResp.status === 200)) {
         logWithContext.auth('OTP sent successfully', { phoneNumber, formattedNumber });
         return true;
       } else {
@@ -141,8 +144,8 @@ export class OTPService {
     }
 
     // Generate OTP
-    // const otp = this.generateOTP();
-    const otp = '123456';
+    const otp = this.generateOTP();
+    
     // Store OTP in Redis
     const otpKey = this.getOTPKey(phoneNumber);
     await redisClient.set(otpKey, otp, config.sms.otpExpiry);
@@ -152,14 +155,14 @@ export class OTPService {
     await redisClient.set(pendingKey, data, config.sms.otpExpiry + 60); // Extra minute buffer
 
     // Send SMS
-    // const sent = await this.sendSMS(phoneNumber, otp);
+    const sent = await this.sendSMS(phoneNumber, otp);
 
-    // if (!sent) {
-    //   // In development, log the OTP for testing
-    //   if (config.isDevelopment) {
-    //     logger.info(`[DEV] OTP for ${phoneNumber}: ${otp}`);
-    //   }
-    // }
+    if (!sent) {
+      // In development, log the OTP for testing
+      if (config.isDevelopment) {
+        logger.info(`[DEV] OTP for ${phoneNumber}: ${otp}`);
+      }
+    }
 
     logWithContext.auth('Signup OTP requested', { phoneNumber, attempt: attempts });
 
@@ -244,8 +247,8 @@ export class OTPService {
     }
 
     // Generate and store OTP
-    // const otp = this.generateOTP();
-     const otp = '123456';
+    // Generate and store OTP
+    const otp = this.generateOTP();
     const otpKey = this.getOTPKey(phoneNumber);
     await redisClient.set(otpKey, otp, config.sms.otpExpiry);
 
